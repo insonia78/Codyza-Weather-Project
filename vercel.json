@@ -1,0 +1,28 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "services": {
+    "app": {
+      "root": "codyza-weather-angular/app",
+      "framework": "angular"
+    },
+    "app-2": {
+      "root": "codyza-weather-react/app",
+      "framework": "create-react-app"
+    },
+    "v1": {
+      "root": "codyza-weather-registration-api-python/api/v1",
+      "framework": "fastapi"
+    },
+    "app-3": {
+      "root": "codyza-weatherapi-api-nestjs/app",
+      "framework": "nestjs"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": {
+        "service": "app"
+      }
+    }
+  ]
