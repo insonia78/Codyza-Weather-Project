@@ -2,12 +2,12 @@
   "$schema": "https://openapi.vercel.sh/microfrontends.json",
   "version": "1",
   "applications": {
-    "codyza-weather-project-2tnd": {
+    "codyza-weather-project-954u": {
       "packageName": "app",
       "development": {
         "local": 3000,
         "task": "start",
-        "fallback": "codyza-weather-project-2tnd.vercel.app"
+        "fallback": "codyza-weather-project-954u.vercel.app"
       }
     },
     "codyza-weather-project": {
