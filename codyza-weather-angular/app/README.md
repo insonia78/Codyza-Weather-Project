@@ -35,7 +35,7 @@ The Angular app uses two weather API base URLs:
 - development: `/api/weather`, which the dev server proxies to `http://localhost:3000`
 - production: the deployed Supabase weather gateway at `https://ywdslwhykwgegkdnhvvi.supabase.co/functions/v1/weather-gateway/weather`
 
-When a `jwt_token` exists in local storage, Angular automatically sends it as a `Bearer` token on outbound API requests through the shared HTTP interceptor. In production, the `weather-gateway` validates that token before forwarding the request to the weather API.
+When a `jwt_token` exists in local storage, Angular automatically sends it as a `Bearer` token on outbound API requests through the shared HTTP interceptor. In production, the `weather-gateway` validates that token before forwarding the request to the weather API. The interceptor also sends the public Supabase `apikey` required by the deployed gateway validator.
 
 If you want the interactive map enabled in the browser, set a public Google Maps JavaScript API key in:
 
