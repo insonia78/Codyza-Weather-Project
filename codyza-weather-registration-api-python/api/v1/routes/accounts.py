@@ -12,9 +12,9 @@ from controller.accounts_controller.models.models import (
 accounts_router = APIRouter(prefix="/accounts", tags=["accounts"])
 
 
-@accounts_router.post("/login", status_code=status.HTTP_200_OK)
-def do_get(session: SessionDep) -> list[AccountPublic]:
-    return get_account(session)
+@accounts_router.post("/login", status_code=status.HTTP_200_OK, response_model=AccountPublic)
+def do_get(body: AccountBase, session: SessionDep) -> AccountPublic:
+    return get_account(body, session)
 
 
 @accounts_router.post("/", status_code=status.HTTP_201_CREATED)

@@ -9,12 +9,21 @@ from sqlmodel import select
 from database.postgres import SessionDep
 
 
-def get_account(session: SessionDep) -> list[AccountPublic]:
+def get_account(body: AccountBase, session: SessionDep) -> AccountPublic:
     try:
-        statement = select(Account)
-        result = session.execute(statement)
-        items = result.scalars().all()
-        return items
+        statement = select(Account).where(
+            Account.email == body.email,
+            Account.password == body.password,
+        )
+        account = session.exec(statement).first()
+        if not account:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Account not found",
+            )
+        return AccountPublic.model_validate(account)
+    except HTTPException:
+        raise
     except Exception as exc:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,

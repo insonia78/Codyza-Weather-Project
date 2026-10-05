@@ -5,7 +5,7 @@
 ## Features
 
 - Health check endpoint
-- Create, list, update, partially update, and delete accounts
+- Create, authenticate, update, partially update, and delete accounts
 - PostgreSQL connection through SQLModel and SQLAlchemy
 - Database existence check during startup
 - Table creation during startup
@@ -125,9 +125,18 @@ Returns:
 
 ### Accounts
 
-#### `GET /accounts/`
+#### `POST /accounts/login`
 
-Returns all accounts.
+Returns the single account row that matches the provided email and password.
+
+Example request body:
+
+```json
+{
+  "email": "user@example.com",
+  "password": "password123"
+}
+```
 
 #### `POST /accounts/`
 
