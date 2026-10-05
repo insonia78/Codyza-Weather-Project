@@ -49,6 +49,15 @@ Create React App loads these automatically:
 
 For machine-specific overrides, add one of the ignored local files such as `.env.development.local` or `.env.production.local`.
 
+## Microfrontends configuration
+
+The default microfrontends config lives in `microfrontends.json` at the app root.
+
+- `codyza-weather-react` maps to this Create React App project, whose `package.json` name is `app`
+- local development uses the existing `start` script on port `3000`
+- the child Angular microfrontend uses its `start` script on port `4200`
+- local fallback hosts point to each deployed Vercel application so routing still works if one app is not running locally
+
 ### `npm run eject`
 
 **Note: this is a one-way operation. Once you `eject`, you can’t go back!**
