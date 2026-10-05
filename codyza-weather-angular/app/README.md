@@ -9,6 +9,8 @@ Codyza Weather is an Angular frontend backed by a NestJS API. The Nest service p
 
 ## Architecture
 
+
+
 - [app/](.) contains the Angular frontend
 - [../backend/](../backend/README.md) contains the NestJS backend that owns the weather/geocoding key
 - [src/app/store/weather/](./src/app/store/weather/) contains the weather actions, effects, storage keys, and nested state slices for search, dashboard, preferences, saved/comparison data, map state, and UI messages
