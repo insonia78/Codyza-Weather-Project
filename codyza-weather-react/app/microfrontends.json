@@ -12,6 +12,7 @@
     },
     "codyza-weather-project": {
       "packageName": "app",
+      "assetPrefix": "codyza-weather-angular-assets",
       "development": {
         "local": 4200,
         "task": "start",
@@ -19,7 +20,11 @@
       },
       "routing": [
         {
-          "paths": ["/codyza-weather-angular", "/codyza-weather-angular/:path*"]
+          "paths": [
+            "/codyza-weather-angular",
+            "/codyza-weather-angular/:path*",
+            "/codyza-weather-angular-assets/:path*"
+          ]
         }
       ]
     }

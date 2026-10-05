@@ -67,6 +67,8 @@ The Angular dev server proxies `/api` to `http://localhost:3000`.
 npm run build
 ```
 
+Production builds use the `/codyza-weather-angular-assets/` deploy URL so the app can run as a Vercel child microfrontend under `/codyza-weather-angular`. The accompanying [vercel.json](./vercel.json) rewrite maps those asset requests back to the generated bundle files on the standalone Angular deployment.
+
 ## Unit tests
 
 ```bash

@@ -11,6 +11,8 @@ In the project directory, you can run:
 Runs the app in the development mode.\
 Open [http://localhost:3000](http://localhost:3000) to view it in the browser.
 
+
+
 The page will reload if you make edits.\
 You will also see any lint errors in the console.
 
@@ -62,6 +64,7 @@ The default microfrontends config lives in `microfrontends.json` at the app root
 - the React root app uses the Vercel deployment `codyza-weather-project-954u.vercel.app` for its default fallback and post-auth redirects
 - the Angular child can still fall back to its deployed Vercel application during local development
 - production routing sends both `/codyza-weather-angular` and `/codyza-weather-angular/*` to the Angular microfrontend
+- Angular static assets are routed through `/codyza-weather-angular-assets/*` so the child app can boot correctly from the React root domain
 
 ### `npm run eject`
 

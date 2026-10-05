@@ -51,6 +51,7 @@
                   "with": "src/environments/environment.prod.ts"
                 }
               ],
+              "deployUrl": "/codyza-weather-angular-assets/",
               "outputHashing": "all"
             },
             "development": {

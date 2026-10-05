@@ -1,0 +1,8 @@
+{
+  "rewrites": [
+    {
+      "source": "/codyza-weather-angular-assets/:match*",
+      "destination": "/:match*"
+    }
+  ]
+}
