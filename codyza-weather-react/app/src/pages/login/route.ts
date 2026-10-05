@@ -45,7 +45,7 @@ export async function loginAction({
       const { token } = (await response.json()) as { token: string };
       localStorage.setItem("jwt_token", token);
 
-      // return redirectDocument(process.env.REACT_APP_CODYZA_WEATHER_URL ?? "/");
+      return redirectDocument(process.env.REACT_APP_CODYZA_WEATHER_URL ?? "/");
     }
 
     throw new Error("Login request failed.");
