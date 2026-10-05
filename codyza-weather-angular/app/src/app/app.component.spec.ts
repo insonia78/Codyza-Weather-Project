@@ -77,8 +77,10 @@ describe('AppComponent', () => {
   it('should render a logout button that clears persisted weather data', () => {
     const fixture = TestBed.createComponent(AppComponent);
     const app = fixture.componentInstance;
+    const assignSpy = spyOn(window.location, 'assign');
 
     localStorage.setItem(WEATHER_STORAGE_KEYS.favorites, JSON.stringify([{ id: '1' }]));
+    localStorage.setItem('jwt_token', 'token');
     app.onSearchChange('Rome');
 
     fixture.detectChanges();
@@ -93,5 +95,7 @@ describe('AppComponent', () => {
 
     expect(app.searchQuery).toBe('');
     expect(localStorage.getItem(WEATHER_STORAGE_KEYS.favorites)).toBeNull();
+    expect(localStorage.getItem('jwt_token')).toBeNull();
+    expect(assignSpy).toHaveBeenCalledWith('http://localhost:3000/');
   });
 });

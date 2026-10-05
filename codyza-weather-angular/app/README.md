@@ -31,11 +31,14 @@ Set `GOOGLE_WEATHER_API_KEY` in `backend\.env`.
 ## Frontend setup
 
 The frontend now calls the Nest API through `/api/weather` and no longer stores the weather provider key in Angular environment files.
+When a `jwt_token` exists in local storage, Angular automatically sends it as a `Bearer` token on outbound API requests through the shared HTTP interceptor.
 
 If you want the interactive map enabled in the browser, set a public Google Maps JavaScript API key in:
 
 - [src/environments/environment.ts](./src/environments/environment.ts)
 - [src/environments/environment.prod.ts](./src/environments/environment.prod.ts)
+
+The same environment files also define `rootAppUrl`, which is where the Angular logout button sends the user after clearing local session state.
 
 Update:
 

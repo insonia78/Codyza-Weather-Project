@@ -27,16 +27,14 @@ export async function registrationAction({
     };
   }
 
-  const headers = {
-    "Content-Type": "application/json",
-    "apiKey": process.env.REACT_APP_API_KEY ?? "",
-  };
-
   try {
     const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/accounts`, {
       method: "POST",
       body: JSON.stringify({ email, password }),
-      headers,
+      headers: {
+        "Content-Type": "application/json",
+        "apiKey": process.env.REACT_APP_API_KEY ?? "",
+      },
     });
 
     if (response.ok) {

@@ -320,6 +320,8 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
 
   logout(): void {
     this.resetApp();
+    localStorage.removeItem('jwt_token');
+    window.location.assign(environment.rootAppUrl);
   }
 
   useCurrentLocation(): void {
