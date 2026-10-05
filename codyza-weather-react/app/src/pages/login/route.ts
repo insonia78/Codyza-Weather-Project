@@ -1,5 +1,5 @@
 import React from "react";
-import { redirectDocument, type ActionFunctionArgs, type RouteObject } from "react-router-dom";
+import { type ActionFunctionArgs, type RouteObject } from "react-router-dom";
 import LoginPage from "./index";
 import { validateLoginForm } from "./functions";
 
