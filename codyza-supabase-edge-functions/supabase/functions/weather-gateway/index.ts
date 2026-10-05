@@ -2,11 +2,14 @@
 // https://deno.land/manual/getting_started/setup_your_environment
 // This enables autocomplete, go to definition, etc.
 // Setup type definitions for built-in Supabase Runtime APIs
-// import "@supabase/functions-js/edge-runtime.d.ts";
+import "@supabase/functions-js/edge-runtime.d.ts";
 
 import { buildWeatherGatewayHeaders } from "../_shared/weather-gateway-auth.ts";
+import { buildForwardHeaders as buildWeatherForwardHeaders } from "./build-forward-headers.ts";
 import { SERVICES } from "./models.ts";
 import { supportedRoutes } from "./supported-routes.ts";
+import type { VerifiedToken } from "./utils.ts";
+import { verifyTokenWithValidator } from "./verify-token-validator.ts";
 
 console.log("Weather Gateway init");
 
@@ -128,8 +131,15 @@ function buildContainerReachableBackendUrl(baseUrl: string) {
   return parsedUrl.toString();
 }
 
-function buildForwardHeaders(req: Request, service: SERVICES | null) {
-  const headers = new Headers(req.headers);
+function buildProxyHeaders(
+  req: Request,
+  service: SERVICES | null,
+  verifiedToken: VerifiedToken | null,
+) {
+  const headers = service === SERVICES.WEATHER && verifiedToken
+    ? buildWeatherForwardHeaders(req, verifiedToken.payload, verifiedToken.tokenType)
+    : new Headers(req.headers);
+
   headers.delete("host");
   headers.delete("content-length");
 
@@ -146,11 +156,12 @@ function buildForwardHeaders(req: Request, service: SERVICES | null) {
 async function fetchBackendResponse(
   req: Request,
   service: SERVICES | null,
+  verifiedToken: VerifiedToken | null,
   targetUrl: URL,
   requestBody: Blob | null,
   backendBaseUrl: string,
 ) {
-  const headers = buildForwardHeaders(req, service);
+  const headers = buildProxyHeaders(req, service, verifiedToken);
 
   try {
     return await fetch(targetUrl, {
@@ -263,9 +274,21 @@ export default {
     const targetUrl = buildTargetUrl(backendBaseUrl, proxyPath, requestUrl.search);
 
     try {
+      let verifiedToken: VerifiedToken | null = null;
+      if (service === SERVICES.WEATHER) {
+        const validationResult = await verifyTokenWithValidator(req, jsonResponse);
+        const { errorResponse } = validationResult;
+        if (errorResponse) {
+          return errorResponse;
+        }
+
+        verifiedToken = validationResult.verifiedToken;
+      }
+
       const backendResponse = await fetchBackendResponse(
         req,
         service,
+        verifiedToken,
         targetUrl,
         requestBody,
         backendBaseUrl,

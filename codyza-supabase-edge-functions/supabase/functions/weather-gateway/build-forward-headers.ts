@@ -1,13 +1,23 @@
-export function buildForwardHeaders(req, payload, tokenType) {
+export function buildForwardHeaders(
+  req: Request,
+  payload: Record<string, unknown>,
+  tokenType: "supabase" | "custom",
+) {
   const headers = new Headers(req.headers);
   headers.delete("host");
   headers.delete("content-length");
-  // headers.set("X-User-Id", getPayloadStringValue(payload, "sub"));
-  // headers.set("X-User-Type", tokenType);
-  // headers.set("X-User-Payload", JSON.stringify(payload));
+
+  const userId = getPayloadStringValue(payload, "sub");
+  if (userId) {
+    headers.set("X-User-Id", userId);
+  }
+
+  headers.set("X-User-Type", tokenType);
+  headers.set("X-User-Payload", JSON.stringify(payload));
   return headers;
 }
-function getPayloadStringValue(payload, key) {
+
+function getPayloadStringValue(payload: Record<string, unknown>, key: string) {
   const value = payload[key];
   return typeof value === "string" ? value : "";
 }

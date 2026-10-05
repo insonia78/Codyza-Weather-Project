@@ -1,3 +1,8 @@
+export type VerifiedToken = {
+  payload: Record<string, unknown>;
+  tokenType: "supabase" | "custom";
+};
+
 export function jsonResponse(status, body) {
   return new Response(JSON.stringify(body), {
     status,
@@ -12,9 +17,11 @@ export function jsonResponse(status, body) {
 export function isRecord(value) {
   return typeof value === "object" && value !== null;
 }
-export function isVerifiedToken(value) {
+
+export function isVerifiedToken(value): value is VerifiedToken {
   if (!isRecord(value)) {
     return false;
   }
+
   return isRecord(value.payload) && (value.tokenType === "supabase" || value.tokenType === "custom");
 }

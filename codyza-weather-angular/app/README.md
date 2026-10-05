@@ -30,8 +30,12 @@ Set `GOOGLE_WEATHER_API_KEY` in `backend\.env`.
 
 ## Frontend setup
 
-The frontend now calls the Nest API through `/api/weather` and no longer stores the weather provider key in Angular environment files.
-When a `jwt_token` exists in local storage, Angular automatically sends it as a `Bearer` token on outbound API requests through the shared HTTP interceptor.
+The Angular app uses two weather API base URLs:
+
+- development: `/api/weather`, which the dev server proxies to `http://localhost:3000`
+- production: the deployed Supabase weather gateway at `https://ywdslwhykwgegkdnhvvi.supabase.co/functions/v1/weather-gateway/weather`
+
+When a `jwt_token` exists in local storage, Angular automatically sends it as a `Bearer` token on outbound API requests through the shared HTTP interceptor. In production, the `weather-gateway` validates that token before forwarding the request to the weather API.
 
 If you want the interactive map enabled in the browser, set a public Google Maps JavaScript API key in:
 
