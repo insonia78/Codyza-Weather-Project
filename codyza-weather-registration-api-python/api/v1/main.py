@@ -5,11 +5,11 @@ from routes.accounts import accounts_router
 
 
 app = FastAPI()
-app.add_middleware(
-    WeatherGatewayAuthMiddleware,
-    public_paths={"/health", "/docs", "/docs/oauth2-redirect", "/openapi.json", "/redoc"},
-    protected_path_prefixes={"/accounts"},
-)
+# app.add_middleware(
+#     WeatherGatewayAuthMiddleware,
+#     public_paths={"/health", "/docs", "/docs/oauth2-redirect", "/openapi.json", "/redoc"},
+#     protected_path_prefixes={"https://ywdslwhykwgegkdnhvvi.supabase.co/functions/v1/weather-gateway/*"},
+# )
 
 app.include_router(accounts_router)
 
