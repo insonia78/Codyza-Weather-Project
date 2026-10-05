@@ -12,17 +12,17 @@ from database.postgres import SessionDep
 
 def get_account(body: AccountBase, session: SessionDep) -> AccountEmailPublic:
     try:
-        statement = select(Account).where(
+        statement = select(Account.email).where(
             Account.email == body.email,
             Account.password == body.password,
         )
-        account = session.exec(statement).first()
-        if not account:
+        email = session.exec(statement).first()
+        if not email:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Account not found",
             )
-        return AccountEmailPublic(email=account.email)
+        return AccountEmailPublic(email=email)
     except HTTPException:
         raise
     except Exception as exc:

@@ -2,32 +2,62 @@
 // https://deno.land/manual/getting_started/setup_your_environment
 // This enables autocomplete, go to definition, etc.
 // Setup type definitions for built-in Supabase Runtime APIs
+// import "@supabase/functions-js/edge-runtime.d.ts";
+
+import { buildWeatherGatewayHeaders } from "../_shared/weather-gateway-auth.ts";
 import { SERVICES } from "./models.ts";
 import { supportedRoutes } from "./supported-routes.ts";
 
 console.log("Weather Gateway init");
 
-const corsHeaders = {
+const defaultCorsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
-  "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS"
+  "Access-Control-Allow-Headers": [
+    "authorization",
+    "x-client-info",
+    "apikey",
+    "content-type",
+    "accept",
+    "origin",
+    "x-weather-gateway-caller",
+    "x-weather-gateway-secret",
+  ].join(", "),
+  "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
 };
 
 const FUNCTION_NAME = "weather-gateway";
 const FUNCTION_BASE_PATH = `/functions/v1/${FUNCTION_NAME}`;
 const FUNCTION_PATH_PREFIXES = [FUNCTION_BASE_PATH, `/${FUNCTION_NAME}`];
-const backendUrl = Deno.env.get("WEATHER_REGISTRATION_API_URL") ?? Deno.env.get("BACKEND_URL");
+const registrationApiUrl =
+  Deno.env.get("WEATHER_REGISTRATION_API_URL") ??
+  Deno.env.get("REGISTRATION_API_URL");
+const weatherApiUrl =
+  Deno.env.get("WEATHER_API_URL") ??
+  Deno.env.get("NEST_WEATHER_API_URL") ??
+  Deno.env.get("BACKEND_URL");
+const jwtCreatorUrl = Deno.env.get("JWT_CREATOR_URL");
+const gatewayInternalSecret = Deno.env.get("WEATHER_GATEWAY_INTERNAL_SECRET");
 const CONTAINER_HOSTNAME = "host.docker.internal";
 
+function buildCorsHeaders(req?: Request) {
+  const requestOrigin = req?.headers.get("origin");
+  const requestedHeaders = req?.headers.get("access-control-request-headers");
 
+  return {
+    ...defaultCorsHeaders,
+    "Access-Control-Allow-Origin": requestOrigin ?? defaultCorsHeaders["Access-Control-Allow-Origin"],
+    "Access-Control-Allow-Headers": requestedHeaders ?? defaultCorsHeaders["Access-Control-Allow-Headers"],
+    Vary: "Origin, Access-Control-Request-Headers",
+  };
+}
 
-function jsonResponse(status: number, body: unknown) {
+function jsonResponse(status: number, body: unknown, req?: Request) {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
-      ...corsHeaders,
-      "Content-Type": "application/json"
-    }
+      ...buildCorsHeaders(req),
+      "Content-Type": "application/json",
+    },
   });
 }
 
@@ -46,6 +76,30 @@ function extractProxyPath(pathname: string) {
 
 function matchRoute(pathname: string) {
   return supportedRoutes.find((route) => route.pattern.test(pathname));
+}
+
+function inferService(proxyPath: string): SERVICES | null {
+  if (proxyPath.startsWith(`/${SERVICES.ACCOUNTS}`)) {
+    return SERVICES.ACCOUNTS;
+  }
+
+  if (proxyPath.startsWith(`/${SERVICES.WEATHER}`)) {
+    return SERVICES.WEATHER;
+  }
+
+  return null;
+}
+
+function resolveBackendUrl(service: SERVICES | null): string | null {
+  if (service === SERVICES.ACCOUNTS) {
+    return registrationApiUrl ?? null;
+  }
+
+  if (service === SERVICES.WEATHER) {
+    return weatherApiUrl ?? null;
+  }
+
+  return registrationApiUrl ?? weatherApiUrl ?? null;
 }
 
 async function buildForwardBody(req: Request) {
@@ -74,22 +128,38 @@ function buildContainerReachableBackendUrl(baseUrl: string) {
   return parsedUrl.toString();
 }
 
-function buildForwardHeaders(req: Request) {
+function buildForwardHeaders(req: Request, service: SERVICES | null) {
   const headers = new Headers(req.headers);
   headers.delete("host");
   headers.delete("content-length");
+
+  if (service === SERVICES.ACCOUNTS && gatewayInternalSecret) {
+    const gatewayHeaders = buildWeatherGatewayHeaders(gatewayInternalSecret);
+    Object.entries(gatewayHeaders).forEach(([key, value]) => {
+      headers.set(key, value);
+    });
+  }
+
   return headers;
 }
 
-async function fetchBackendResponse(req: Request, targetUrl: URL, requestBody: Blob | null) {
+async function fetchBackendResponse(
+  req: Request,
+  service: SERVICES | null,
+  targetUrl: URL,
+  requestBody: Blob | null,
+  backendBaseUrl: string,
+) {
+  const headers = buildForwardHeaders(req, service);
+
   try {
     return await fetch(targetUrl, {
       method: req.method,
-      headers: buildForwardHeaders(req),
-      body: requestBody
+      headers,
+      body: requestBody,
     });
   } catch (error) {
-    const containerReachableBackendUrl = buildContainerReachableBackendUrl(backendUrl as string);
+    const containerReachableBackendUrl = buildContainerReachableBackendUrl(backendBaseUrl);
     if (!containerReachableBackendUrl) {
       throw error;
     }
@@ -98,54 +168,68 @@ async function fetchBackendResponse(req: Request, targetUrl: URL, requestBody: B
     const containerTargetUrl = buildTargetUrl(
       containerReachableBackendUrl,
       extractProxyPath(requestUrl.pathname),
-      requestUrl.search
+      requestUrl.search,
     );
 
     return await fetch(containerTargetUrl, {
       method: req.method,
-      headers: buildForwardHeaders(req),
-      body: requestBody
+      headers,
+      body: requestBody,
     });
   }
 }
 
-async function buildGatewayResponse(
-  req: Request,
-  proxyPath: string,
-  requestBody:any = null
-) {
-
-  const response = await fetch(proxyPath, {
-    method: "POST",
-    headers: buildForwardHeaders(req),
-    body: requestBody
-  });
-  if (!response.ok) {
-    throw new Error(`Failed to obtain JWT from JWT_CREATOR_URL: ${response.status} ${response.statusText}`);
+async function parseBackendBody(response: Response) {
+  const contentType = response.headers.get("content-type") ?? "";
+  if (contentType.includes("application/json")) {
+    return await response.json();
   }
 
-  return await response.json(); 
+  return await response.text();
+}
+
+function buildResponseHeaders(sourceHeaders: Headers, req?: Request) {
+  const responseHeaders = new Headers(sourceHeaders);
+  Object.entries(buildCorsHeaders(req)).forEach(([key, value]) => {
+    responseHeaders.set(key, value);
+  });
+  return responseHeaders;
+}
+
+async function appendTokenForAccountRoutes(
+  req: Request,
+  payload: unknown,
+  requestBody: Blob | null,
+) {
+  if (!jwtCreatorUrl || !(payload && typeof payload === "object" && !Array.isArray(payload))) {
+    return payload;
+  }
+
+  const jwtResponse = await fetch(jwtCreatorUrl, {
+    method: "POST",
+    headers: new Headers(req.headers),
+    body: requestBody,
+  });
+
+  if (!jwtResponse.ok) {
+    throw new Error(`Failed to obtain JWT from JWT_CREATOR_URL: ${jwtResponse.status} ${jwtResponse.statusText}`);
+  }
+
+  const jwtPayload = await jwtResponse.json();
+  return {
+    ...payload,
+    token: jwtPayload.token,
+  };
 }
 
 console.log("Weather Gateway initialized");
 
-
-
-
 export default {
-  async fetch(req: Request) {
+  fetch: async (req: Request) => {
     console.log(`Incoming request: ${req.method} ${req.url}`);
 
     if (req.method === "OPTIONS") {
-      return new Response("ok", {
-        headers: corsHeaders
-      });
-    }
-
-    if (!backendUrl) {
-      return jsonResponse(500, {
-        error: "Missing WEATHER_REGISTRATION_API_URL or BACKEND_URL environment variable"
-      });
+      return new Response("ok", { headers: buildCorsHeaders(req) });
     }
 
     const requestUrl = new URL(req.url);
@@ -154,69 +238,67 @@ export default {
     if (!matchedRoute) {
       return jsonResponse(404, {
         error: "Endpoint not exposed by weather-gateway",
-        path: proxyPath
-      });
+        path: proxyPath,
+      }, req);
     }
 
     if (!matchedRoute.methods.includes(req.method)) {
       return jsonResponse(405, {
         error: "Method not allowed for endpoint",
         method: req.method,
-        path: proxyPath
-      });
+        path: proxyPath,
+      }, req);
+    }
+
+    const service = inferService(proxyPath);
+    const backendBaseUrl = resolveBackendUrl(service);
+    if (!backendBaseUrl) {
+      return jsonResponse(500, {
+        error: "Missing backend URL environment variable for requested service",
+        service,
+      }, req);
     }
 
     const requestBody = await buildForwardBody(req);
-    const targetUrl = buildTargetUrl(backendUrl, proxyPath, requestUrl.search);
+    const targetUrl = buildTargetUrl(backendBaseUrl, proxyPath, requestUrl.search);
 
     try {
-      if(proxyPath.includes(SERVICES.WEATHER)) {
-            const jwtValidatorUrl = Deno.env.get("JWT_VALIDATOR_URL");
-            console.log(`Authorization header: ${req.headers}`);
-            const { authorization }:any = req.headers;
-            if (!jwtValidatorUrl) {
-              throw new Error("Missing JWT_VALIDATOR_URL environment variable");
-            }
-            buildGatewayResponse(req, proxyPath, authorization);
+      const backendResponse = await fetchBackendResponse(
+        req,
+        service,
+        targetUrl,
+        requestBody,
+        backendBaseUrl,
+      );
+      const responseHeaders = buildResponseHeaders(backendResponse.headers, req);
+      const responseBody = await parseBackendBody(backendResponse);
 
-      }
-      const backendResponse = await fetchBackendResponse(req, targetUrl, requestBody);
-      
-      if(proxyPath.includes(SERVICES.ACCOUNTS)) {
-         const response =  await buildGatewayResponse(req, proxyPath, backendResponse);
-         (backendResponse as any).token = response.token;
-      } else {
-        return  new Response(JSON.stringify(backendResponse), {
+      if (service === SERVICES.ACCOUNTS && backendResponse.ok) {
+        const payloadWithToken = await appendTokenForAccountRoutes(req, responseBody, requestBody);
+        return new Response(JSON.stringify(payloadWithToken), {
           status: backendResponse.status,
-          headers: backendResponse.headers
+          headers: responseHeaders,
         });
       }
+
+      if (typeof responseBody === "string") {
+        return new Response(responseBody, {
+          status: backendResponse.status,
+          headers: responseHeaders,
+        });
+      }
+
+      return new Response(JSON.stringify(responseBody), {
+        status: backendResponse.status,
+        headers: responseHeaders,
+      });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       console.error("Gateway proxy error:", message);
       return jsonResponse(502, {
         error: "Gateway failed to reach destination server",
-        details: message
-      });
+        details: message,
+      }, req);
     }
-  }
+  },
 };
-
-/* To invoke locally:
-
-  1. Run `supabase start` and start the FastAPI app at WEATHER_REGISTRATION_API_URL.
-     If the API runs on your host machine, set WEATHER_REGISTRATION_API_URL to
-     `http://host.docker.internal:8000` because the local Supabase Edge Runtime
-     runs inside Docker.
-
-  2. Make HTTP requests:
-
-  curl -i --location --request GET 'http://127.0.0.1:54331/functions/v1/weather-gateway/health' \
-    --header 'apiKey: sb_publishable_your_key'
-
-  curl -i --location --request POST 'http://127.0.0.1:54331/functions/v1/weather-gateway/accounts/' \
-    --header 'apiKey: sb_publishable_your_key' \
-    --header 'Content-Type: application/json' \
-    --data '{"username":"demo","email":"demo@example.com","password":"secret123"}'
-
-*/

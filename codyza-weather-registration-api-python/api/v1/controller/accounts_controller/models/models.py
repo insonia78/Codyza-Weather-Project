@@ -26,7 +26,7 @@ class AccountPublic(AccountBase):
 
 
 class AccountEmailPublic(SQLModel):
-    email: EmailStr
+    email: str
 
 
 # Account update model - all fields can be optional because

@@ -24,5 +24,29 @@ export const supportedRoutes = [
       "PATCH",
       "DELETE"
     ]
+  },
+  {
+    pattern: /^\/weather\/status\/?$/,
+    methods: [
+      "GET"
+    ]
+  },
+  {
+    pattern: /^\/weather\/search\/?$/,
+    methods: [
+      "GET"
+    ]
+  },
+  {
+    pattern: /^\/weather\/reverse\/?$/,
+    methods: [
+      "GET"
+    ]
+  },
+  {
+    pattern: /^\/weather\/dashboard\/?$/,
+    methods: [
+      "POST"
+    ]
   }
 ];
