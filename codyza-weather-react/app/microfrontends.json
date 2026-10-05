@@ -10,12 +10,12 @@
         "fallback": "www.weath.site"
       }
     },
-    "codyza-weather-angular": {
+    "codyza-weather-project": {
       "packageName": "app",
       "development": {
         "local": 4200,
         "task": "start",
-        "fallback": "codyza-weather-angular.vercel.app"
+        "fallback": "codyza-weather-project.vercel.app"
       },
       "routing": [
         {

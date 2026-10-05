@@ -43,6 +43,7 @@ The following variables are available:
 - `REACT_APP_APP_NAME`: display name shown in the UI
 - `REACT_APP_ENVIRONMENT`: current environment label
 - `REACT_APP_API_BASE_URL`: API base URL used by the frontend configuration
+- `REACT_APP_CODYZA_WEATHER_URL`: URL used after successful login or registration to send the user to the weather application
 
 Create React App loads these automatically:
 
@@ -57,8 +58,9 @@ The default microfrontends config lives in `microfrontends.json` at the app root
 
 - the default production Vercel project is `codyza-weather-project-2tnd`, which maps to this Create React App project whose `package.json` name is `app`
 - local development uses the existing `start` script on port `3000`
-- the child Angular microfrontend uses its `start` script on port `4200`
-- local fallback hosts point to each deployed Vercel application so routing still works if one app is not running locally
+- the child Angular microfrontend is mapped to the production Vercel project `codyza-weather-project` and uses its `start` script on port `4200`
+- the React root app uses the custom domain `www.weath.site` for its default fallback and post-auth redirects
+- the Angular child can still fall back to its deployed Vercel application during local development
 - production routing sends both `/codyza-weather-angular` and `/codyza-weather-angular/*` to the Angular microfrontend
 
 ### `npm run eject`

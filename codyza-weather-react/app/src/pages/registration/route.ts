@@ -1,5 +1,5 @@
 import React from "react";
-import { type ActionFunctionArgs, type RouteObject } from "react-router-dom";
+import { redirectDocument, type ActionFunctionArgs, type RouteObject } from "react-router-dom";
 import RegistrationPage from "./index";
 import { validateRegistrationForm } from "./functions";
 
@@ -26,25 +26,27 @@ export async function registrationAction({
       values: { email },
     };
   }
-  
+
   const headers = {
     "Content-Type": "application/json",
     "apiKey": process.env.REACT_APP_API_KEY ?? "",
   };
- 
+
   try {
     const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/accounts`, {
       method: "POST",
       body: JSON.stringify({ email, password }),
-      headers: headers,
+      headers,
     });
-	if(response.ok) {
-		const { token } = (await response.json()) as { token: string };
-		localStorage.setItem("jwt_token", token);
-    // return redirectDocument(process.env.REACT_APP_CODYZA_WEATHER_URL ?? "/");
-	} else {
-		(() => { throw new Error('Registration request failed.'); })();
-	}
+
+    if (response.ok) {
+      const { token } = (await response.json()) as { token: string };
+      localStorage.setItem("jwt_token", token);
+
+      return redirectDocument(process.env.REACT_APP_CODYZA_WEATHER_URL ?? "/");
+    }
+
+    throw new Error("Registration request failed.");
   } catch (error) {
     console.error("Registration request failed:", error);
     return {
@@ -52,10 +54,6 @@ export async function registrationAction({
       values: { email },
     };
   }
-  return {
-    success: "Registration request submitted successfully.",
-    values: { email },
-  };
 }
 
 const registrationRoute: RouteObject = {
