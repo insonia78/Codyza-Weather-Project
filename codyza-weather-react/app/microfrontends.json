@@ -7,7 +7,7 @@
       "development": {
         "local": 3000,
         "task": "start",
-        "fallback": "www.weath.site"
+        "fallback": "codyza-weather-project-2tnd.vercel.app"
       }
     },
     "codyza-weather-project": {
