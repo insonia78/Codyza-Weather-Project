@@ -4,6 +4,7 @@
 // Setup type definitions for built-in Supabase Runtime APIs
 import "@supabase/functions-js/edge-runtime.d.ts";
 import { withSupabase } from "@supabase/server";
+import { buildWeatherGatewayHeaders } from "../_shared/weather-gateway-auth.ts";
 import { supportedRoutes } from "./supported-routes.ts";
 console.log("Weather Gateway init");
 const corsHeaders = {
@@ -15,6 +16,7 @@ const FUNCTION_NAME = "weather-gateway";
 const FUNCTION_BASE_PATH = `/functions/v1/${FUNCTION_NAME}`;
 const JWT_VALIDATOR_PATH = "/functions/v1/jwt-validator";
 const backendUrl = Deno.env.get("WEATHER_REGISTRATION_API_URL") ?? Deno.env.get("BACKEND_URL");
+const gatewayInternalSecret = Deno.env.get("WEATHER_GATEWAY_INTERNAL_SECRET");
 const CONTAINER_HOSTNAME = "host.docker.internal";
 var SERVICES;
 (function(SERVICES) {
@@ -109,9 +111,16 @@ export default {
     try {
       let backendResponse;
       try {
+        const backendHeaders = new Headers(req.headers);
+        if (gatewayInternalSecret) {
+          const gatewayHeaders = buildWeatherGatewayHeaders(gatewayInternalSecret);
+          Object.entries(gatewayHeaders).forEach(([key, value]) => {
+            backendHeaders.set(key, value);
+          });
+        }
         backendResponse = await fetch(targetUrl, {
           method: req.method,
-          headers: new Headers(req.headers),
+          headers: backendHeaders,
           body: requestBody
         });
       } catch (error) {

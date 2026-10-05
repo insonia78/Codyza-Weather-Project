@@ -1,16 +1,15 @@
 from fastapi import FastAPI, status
 from database.postgres import create_db_and_tables
-from middleware.jwt_auth import JWTAuthMiddleware
+from middleware.weather_gateway_auth import WeatherGatewayAuthMiddleware
 from routes.accounts import accounts_router
-# from supabase import create_client, Client
 
 
 app = FastAPI()
-# app.add_middleware(
-#     JWTAuthMiddleware,
-#     public_paths={"/health", "/docs", "/docs/oauth2-redirect", "/openapi.json", "/redoc"},
-#     protected_url_prefixes={"http://127.0.0.1:54331/functions/v1/weather-gateway/accounts/"},
-# )
+app.add_middleware(
+    WeatherGatewayAuthMiddleware,
+    public_paths={"/health", "/docs", "/docs/oauth2-redirect", "/openapi.json", "/redoc"},
+    protected_path_prefixes={"/accounts"},
+)
 
 app.include_router(accounts_router)
 
@@ -23,5 +22,4 @@ def on_startup():
 @app.get("/health",status_code=status.HTTP_200_OK,tags=["health"])
 def read_root():
     return {"Hello": "World"}
-
 

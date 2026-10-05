@@ -4,6 +4,7 @@ from controller.accounts_controller.accounts_controller import create_account, d
 from database.postgres import SessionDep
 from controller.accounts_controller.models.models import (
     AccountBase,
+    AccountEmailPublic,
     AccountPublic,
     AccountUpdate,
 )
@@ -12,8 +13,8 @@ from controller.accounts_controller.models.models import (
 accounts_router = APIRouter(prefix="/accounts", tags=["accounts"])
 
 
-@accounts_router.post("/login", status_code=status.HTTP_200_OK, response_model=AccountPublic)
-def do_get(body: AccountBase, session: SessionDep) -> AccountPublic:
+@accounts_router.post("/login", status_code=status.HTTP_200_OK, response_model=AccountEmailPublic)
+def do_get(body: AccountBase, session: SessionDep) -> AccountEmailPublic:
     return get_account(body, session)
 
 

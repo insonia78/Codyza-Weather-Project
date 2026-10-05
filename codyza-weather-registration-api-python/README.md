@@ -2,7 +2,7 @@
 
 This repository contains the Python registration API for the Codyza Weather Project.
 
-At the moment, the repository is focused on the `api/v1` service, which exposes a small FastAPI application for managing accounts and checking service health.
+At the moment, the repository is focused on the `api/v1` service, which exposes a small FastAPI application for managing accounts, checking service health, and accepting trusted inbound traffic from the Supabase `weather-gateway` edge function.
 
 ## Repository contents
 
@@ -24,12 +24,11 @@ api/
 
 - Health endpoint
 - Account CRUD endpoints
-- JWT bearer-token middleware for protected routes
+- Weather-gateway caller authentication for account routes
 - Automatic database and table creation on startup
 - SQLModel-based database models
 
-The JWT middleware is currently scoped to requests under
-`http://127.0.0.1:54321/functions/v1/weather-gateway/accounts/`.
+When `WEATHER_GATEWAY_INTERNAL_SECRET` is configured, the account routes only accept trusted requests forwarded by the Supabase `weather-gateway` edge function.
 
 ## Tech stack
 
@@ -54,6 +53,7 @@ The JWT middleware is currently scoped to requests under
    - `POSTGRES_FILE_NAME`
    - `JWT_SECRET_KEY`
    - `JWT_ALGORITHM` (optional, defaults to `HS256`)
+   - `WEATHER_GATEWAY_INTERNAL_SECRET` (shared with the `weather-gateway` edge function)
 
 3. Install dependencies:
 
@@ -80,7 +80,7 @@ The JWT middleware is currently scoped to requests under
 
 ### Accounts
 
-- `GET /accounts/`
+- `POST /accounts/login`
 - `POST /accounts/`
 - `PUT /accounts/{id}`
 - `PATCH /accounts/{id}`

@@ -25,6 +25,10 @@ class AccountPublic(AccountBase):
     id: int
 
 
+class AccountEmailPublic(SQLModel):
+    email: EmailStr
+
+
 # Account update model - all fields can be optional because
 # we fallback to None
 class AccountUpdate(SQLModel):

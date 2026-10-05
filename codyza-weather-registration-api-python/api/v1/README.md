@@ -43,14 +43,16 @@ Required environment variables:
 - `POSTGRES_FILE_NAME`: Database name checked and created at startup if missing
 - `JWT_SECRET_KEY`: Secret used to validate incoming bearer tokens
 - `JWT_ALGORITHM`: JWT signing algorithm, defaults to `HS256`
+- `WEATHER_GATEWAY_INTERNAL_SECRET`: shared secret used to trust requests proxied by the Supabase `weather-gateway` edge function
 
 Example shape:
 
 ```env
-POSTGRES_URL=postgresql+psycopg://username:password@localhost:5432/app_database
+POSTGRES_URL=******localhost:5432/app_database
 POSTGRES_FILE_NAME=app_database
 JWT_SECRET_KEY=replace-with-a-secure-secret
 JWT_ALGORITHM=HS256
+WEATHER_GATEWAY_INTERNAL_SECRET=replace-with-the-shared-gateway-secret
 ```
 
 ## Local development
@@ -86,8 +88,6 @@ When the application starts:
 
 ## Authentication
 
-JWT middleware checks bearer tokens on protected routes.
-
 Public routes:
 
 - `/health`
@@ -96,18 +96,15 @@ Public routes:
 - `/openapi.json`
 - `/redoc`
 
-The middleware only checks requests whose full URL starts with:
-
-- `http://127.0.0.1:54321/functions/v1/weather-gateway/accounts/`
-
-Matching requests must send:
+When `WEATHER_GATEWAY_INTERNAL_SECRET` is configured, account routes only accept requests forwarded by the Supabase `weather-gateway` edge function. Matching requests must send:
 
 ```http
-Authorization: Bearer <jwt-token>
+X-Weather-Gateway-Caller: weather-gateway
+X-Weather-Gateway-Secret: <shared-secret>
 ```
 
-If the token is missing, malformed, expired, or invalid, the API returns `401 Unauthorized`.
-Requests outside that URL prefix bypass the JWT middleware.
+If either header is missing or invalid, the API returns `403 Forbidden`.
+If `WEATHER_GATEWAY_INTERNAL_SECRET` is unset, the middleware allows requests through without enforcing gateway headers.
 
 ## Endpoints
 
@@ -127,7 +124,15 @@ Returns:
 
 #### `POST /accounts/login`
 
-Returns the single account row that matches the provided email and password.
+Returns the matching account email as a single JSON object.
+
+Example response body:
+
+```json
+{
+  "email": "user@example.com"
+}
+```
 
 Example request body:
 

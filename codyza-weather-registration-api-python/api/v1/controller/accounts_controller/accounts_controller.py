@@ -2,6 +2,7 @@ from fastapi import HTTPException, status
 from controller.accounts_controller.models.models import (
     Account,
     AccountBase,
+    AccountEmailPublic,
     AccountPublic,
     AccountUpdate,
 )
@@ -9,7 +10,7 @@ from sqlmodel import select
 from database.postgres import SessionDep
 
 
-def get_account(body: AccountBase, session: SessionDep) -> AccountPublic:
+def get_account(body: AccountBase, session: SessionDep) -> AccountEmailPublic:
     try:
         statement = select(Account).where(
             Account.email == body.email,
@@ -21,7 +22,7 @@ def get_account(body: AccountBase, session: SessionDep) -> AccountPublic:
                 status_code=status.HTTP_404_NOT_FOUND,
                 detail="Account not found",
             )
-        return AccountPublic.model_validate(account)
+        return AccountEmailPublic(email=account.email)
     except HTTPException:
         raise
     except Exception as exc:
