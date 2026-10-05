@@ -27,6 +27,8 @@
 
 ## Project setup
 
+This app is validated with Node.js `24.19.0` and npm `11.17.0`.
+
 ```bash
 $ npm install
 ```
@@ -56,6 +58,19 @@ $ npm run test:e2e
 # test coverage
 $ npm run test:cov
 ```
+
+## Weather caching
+
+The weather API now uses an in-memory cache manager for provider responses. The cache is applied inside [weather.service.ts](./src/weather/weather.service.ts) so it covers both `GET` and `POST` endpoints that share the same upstream calls.
+
+- location search cache: 15 minutes
+- reverse geocoding cache: 6 hours
+- current conditions cache: 5 minutes
+- hourly forecast cache: 10 minutes
+- daily forecast cache: 30 minutes
+- hourly history cache: 60 minutes
+
+`forceRefresh: true` on the dashboard request still bypasses cached provider data and fetches fresh weather details.
 
 ## Deployment
 

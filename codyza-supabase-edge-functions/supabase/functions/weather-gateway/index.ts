@@ -2,7 +2,7 @@
 // https://deno.land/manual/getting_started/setup_your_environment
 // This enables autocomplete, go to definition, etc.
 // Setup type definitions for built-in Supabase Runtime APIs
-import "@supabase/functions-js/edge-runtime.d.ts";
+// import "@supabase/functions-js/edge-runtime.d.ts";
 
 import { buildWeatherGatewayHeaders } from "../_shared/weather-gateway-auth.ts";
 import { buildForwardHeaders as buildWeatherForwardHeaders } from "./build-forward-headers.ts";
@@ -41,6 +41,135 @@ const weatherApiUrl =
 const jwtCreatorUrl = Deno.env.get("JWT_CREATOR_URL");
 const gatewayInternalSecret = Deno.env.get("WEATHER_GATEWAY_INTERNAL_SECRET");
 const CONTAINER_HOSTNAME = "host.docker.internal";
+
+type LogLevel = "info" | "warn" | "error";
+
+function logGatewayEvent(level: LogLevel, event: string, details: Record<string, unknown> = {}) {
+  const payload = {
+    event,
+    functionName: FUNCTION_NAME,
+    ...details,
+  };
+  const message = `[weather-gateway] ${JSON.stringify(payload)}`;
+
+  if (level === "error") {
+    console.error(message);
+    return;
+  }
+
+  if (level === "warn") {
+    console.warn(message);
+    return;
+  }
+
+  console.log(message);
+}
+
+function getHeaderPresence(req: Request) {
+  return {
+    hasApiKey: Boolean(req.headers.get("apikey")),
+    hasAuthorization: Boolean(req.headers.get("authorization") ?? req.headers.get("Authorization")),
+    hasGatewayCaller: Boolean(req.headers.get("x-weather-gateway-caller")),
+    hasGatewaySecret: Boolean(req.headers.get("x-weather-gateway-secret")),
+  };
+}
+
+function buildRequestLogContext(req: Request, requestId: string) {
+  const requestUrl = new URL(req.url);
+
+  return {
+    requestId,
+    method: req.method,
+    pathname: requestUrl.pathname,
+    search: requestUrl.search,
+    origin: req.headers.get("origin"),
+    ...getHeaderPresence(req),
+  };
+}
+
+function summarizeBackendUrl(baseUrl: string) {
+  const parsedUrl = new URL(baseUrl);
+
+  return {
+    backendOrigin: parsedUrl.origin,
+    backendPathname: parsedUrl.pathname,
+  };
+}
+
+function getErrorMessage(error: unknown) {
+  return error instanceof Error ? error.message : String(error);
+}
+
+function getConfiguredBackendsSummary() {
+  return {
+    hasRegistrationApiUrl: Boolean(registrationApiUrl),
+    hasWeatherApiUrl: Boolean(weatherApiUrl),
+    hasJwtCreatorUrl: Boolean(jwtCreatorUrl),
+    hasGatewayInternalSecret: Boolean(gatewayInternalSecret),
+    registrationBackend: registrationApiUrl ? summarizeBackendUrl(registrationApiUrl) : null,
+    weatherBackend: weatherApiUrl ? summarizeBackendUrl(weatherApiUrl) : null,
+  };
+}
+
+function summarizeRequestBody(requestBody: Blob | null) {
+  if (!requestBody) {
+    return {
+      hasBody: false,
+      bodySize: 0,
+      bodyType: null,
+    };
+  }
+
+  return {
+    hasBody: true,
+    bodySize: requestBody.size,
+    bodyType: requestBody.type || null,
+  };
+}
+
+function summarizeBodyPayload(payload: unknown) {
+  if (typeof payload === "string") {
+    return {
+      responseShape: "text",
+      textLength: payload.length,
+    };
+  }
+
+  if (Array.isArray(payload)) {
+    return {
+      responseShape: "array",
+      itemCount: payload.length,
+    };
+  }
+
+  if (payload && typeof payload === "object") {
+    return {
+      responseShape: "object",
+      keys: Object.keys(payload).sort(),
+    };
+  }
+
+  return {
+    responseShape: payload === null ? "null" : typeof payload,
+  };
+}
+
+function canResponseHaveBody(method: string, status: number) {
+  return method !== "HEAD" && ![101, 103, 204, 205, 304].includes(status);
+}
+
+function summarizeForwardHeaders(headers: Headers) {
+  return {
+    hasApiKey: headers.has("apikey"),
+    hasAuthorization: headers.has("authorization") || headers.has("Authorization"),
+    hasUserId: headers.has("X-User-Id"),
+    hasUserType: headers.has("X-User-Type"),
+    hasUserPayload: headers.has("X-User-Payload"),
+    hasGatewayCaller: headers.has("x-weather-gateway-caller"),
+    hasGatewaySecret: headers.has("x-weather-gateway-secret"),
+    contentType: headers.get("content-type"),
+  };
+}
 
 function buildCorsHeaders(req?: Request) {
   const requestOrigin = req?.headers.get("origin");
@@ -115,7 +244,16 @@ async function buildForwardBody(req: Request) {
 
 function buildTargetUrl(baseUrl: string, proxyPath: string, search: string) {
   const normalizedBaseUrl = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
-  const normalizedProxyPath = proxyPath.replace(/^\/+/, "");
+  const parsedBaseUrl = new URL(normalizedBaseUrl);
+  const baseSegments = parsedBaseUrl.pathname.split("/").filter(Boolean);
+  const proxySegments = proxyPath.split("/").filter(Boolean);
+
+  const normalizedProxyPath = baseSegments.length > 0 &&
+      proxySegments.length > 0 &&
+      baseSegments[baseSegments.length - 1] === proxySegments[0]
+    ? proxySegments.slice(1).join("/")
+    : proxySegments.join("/");
+
   const targetUrl = new URL(normalizedProxyPath, normalizedBaseUrl);
   targetUrl.search = search;
   return targetUrl;
@@ -160,8 +298,16 @@ async function fetchBackendResponse(
   targetUrl: URL,
   requestBody: Blob | null,
   backendBaseUrl: string,
+  requestId: string,
 ) {
   const headers = buildProxyHeaders(req, service, verifiedToken);
+
+  logGatewayEvent("info", "proxy.forwarding.started", {
+    requestId,
+    targetUrl: targetUrl.toString(),
+    ...summarizeForwardHeaders(headers),
+    ...summarizeRequestBody(requestBody),
+  });
 
   try {
     return await fetch(targetUrl, {
@@ -170,8 +316,15 @@ async function fetchBackendResponse(
       body: requestBody,
     });
   } catch (error) {
+    const initialErrorMessage = getErrorMessage(error);
     const containerReachableBackendUrl = buildContainerReachableBackendUrl(backendBaseUrl);
     if (!containerReachableBackendUrl) {
+      logGatewayEvent("error", "proxy.forwarding.failed", {
+        requestId,
+        targetUrl: targetUrl.toString(),
+        usedContainerFallback: false,
+        details: initialErrorMessage,
+      });
       throw error;
     }
 
@@ -181,6 +334,13 @@ async function fetchBackendResponse(
       extractProxyPath(requestUrl.pathname),
       requestUrl.search,
     );
+
+    logGatewayEvent("warn", "proxy.forwarding.retrying-with-container-host", {
+      requestId,
+      targetUrl: targetUrl.toString(),
+      fallbackTargetUrl: containerTargetUrl.toString(),
+      details: initialErrorMessage,
+    });
 
     return await fetch(containerTargetUrl, {
       method: req.method,
@@ -205,6 +365,34 @@ function buildResponseHeaders(sourceHeaders: Headers, req?: Request) {
     responseHeaders.set(key, value);
   });
   return responseHeaders;
+}
+
+function buildProxiedResponse(
+  req: Request,
+  status: number,
+  headers: Headers,
+  body: unknown,
+) {
+  if (!canResponseHaveBody(req.method, status)) {
+    headers.delete("content-length");
+    headers.delete("content-type");
+    return new Response(null, {
+      status,
+      headers,
+    });
+  }
+
+  if (typeof body === "string") {
+    return new Response(body, {
+      status,
+      headers,
+    });
+  }
+
+  return new Response(JSON.stringify(body), {
+    status,
+    headers,
+  });
 }
 
 async function appendTokenForAccountRoutes(
@@ -234,12 +422,20 @@ async function appendTokenForAccountRoutes(
 }
 
 console.log("Weather Gateway initialized");
+logGatewayEvent("info", "function.initialized", getConfiguredBackendsSummary());
 
 export default {
   fetch: async (req: Request) => {
-    console.log(`Incoming request: ${req.method} ${req.url}`);
+    const requestId = crypto.randomUUID();
+    const startedAt = Date.now();
+
+    logGatewayEvent("info", "request.received", buildRequestLogContext(req, requestId));
 
     if (req.method === "OPTIONS") {
+      logGatewayEvent("info", "request.preflight", {
+        requestId,
+        pathname: new URL(req.url).pathname,
+      });
       return new Response("ok", { headers: buildCorsHeaders(req) });
     }
 
@@ -247,6 +443,11 @@ export default {
     const proxyPath = extractProxyPath(requestUrl.pathname);
     const matchedRoute = matchRoute(proxyPath);
     if (!matchedRoute) {
+      logGatewayEvent("warn", "route.not-exposed", {
+        requestId,
+        proxyPath,
+        method: req.method,
+      });
       return jsonResponse(404, {
         error: "Endpoint not exposed by weather-gateway",
         path: proxyPath,
@@ -254,6 +455,12 @@ export default {
     }
 
     if (!matchedRoute.methods.includes(req.method)) {
+      logGatewayEvent("warn", "route.method-not-allowed", {
+        requestId,
+        proxyPath,
+        method: req.method,
+        allowedMethods: matchedRoute.methods,
+      });
       return jsonResponse(405, {
         error: "Method not allowed for endpoint",
         method: req.method,
@@ -262,8 +469,20 @@ export default {
     }
 
     const service = inferService(proxyPath);
+    logGatewayEvent("info", "route.matched", {
+      requestId,
+      proxyPath,
+      methods: matchedRoute.methods,
+      service,
+    });
+
     const backendBaseUrl = resolveBackendUrl(service);
     if (!backendBaseUrl) {
+      logGatewayEvent("error", "backend.missing-url", {
+        requestId,
+        service,
+        proxyPath,
+      });
       return jsonResponse(500, {
         error: "Missing backend URL environment variable for requested service",
         service,
@@ -273,16 +492,45 @@ export default {
     const requestBody = await buildForwardBody(req);
     const targetUrl = buildTargetUrl(backendBaseUrl, proxyPath, requestUrl.search);
 
+    logGatewayEvent("info", "proxy.resolved", {
+      requestId,
+      proxyPath,
+      service,
+      targetUrl: targetUrl.toString(),
+      ...summarizeRequestBody(requestBody),
+      ...summarizeBackendUrl(backendBaseUrl),
+    });
+
     try {
       let verifiedToken: VerifiedToken | null = null;
       if (service === SERVICES.WEATHER) {
+        logGatewayEvent("info", "weather.validation.started", {
+          requestId,
+          proxyPath,
+          ...getHeaderPresence(req),
+        });
+
         const validationResult = await verifyTokenWithValidator(req, jsonResponse);
         const { errorResponse } = validationResult;
         if (errorResponse) {
+          logGatewayEvent("warn", "weather.validation.failed", {
+            requestId,
+            proxyPath,
+          });
           return errorResponse;
         }
 
         verifiedToken = validationResult.verifiedToken;
+        logGatewayEvent("info", "weather.validation.succeeded", {
+          requestId,
+          proxyPath,
+          tokenType: verifiedToken?.tokenType ?? null,
+          hasSubject: Boolean(
+            verifiedToken?.payload &&
+              typeof verifiedToken.payload.sub === "string" &&
+              verifiedToken.payload.sub.length > 0,
+          ),
+        });
       }
 
       const backendResponse = await fetchBackendResponse(
@@ -292,32 +540,58 @@ export default {
         targetUrl,
         requestBody,
         backendBaseUrl,
+        requestId,
       );
       const responseHeaders = buildResponseHeaders(backendResponse.headers, req);
-      const responseBody = await parseBackendBody(backendResponse);
+      const responseBody = canResponseHaveBody(req.method, backendResponse.status)
+        ? await parseBackendBody(backendResponse)
+        : null;
+
+      logGatewayEvent("info", "proxy.completed", {
+        requestId,
+        proxyPath,
+        service,
+        status: backendResponse.status,
+        ok: backendResponse.ok,
+        contentType: backendResponse.headers.get("content-type"),
+        responseContentLength: backendResponse.headers.get("content-length"),
+        ...summarizeBodyPayload(responseBody),
+        durationMs: Date.now() - startedAt,
+      });
 
       if (service === SERVICES.ACCOUNTS && backendResponse.ok) {
         const payloadWithToken = await appendTokenForAccountRoutes(req, responseBody, requestBody);
-        return new Response(JSON.stringify(payloadWithToken), {
-          status: backendResponse.status,
-          headers: responseHeaders,
+
+        logGatewayEvent("info", "accounts.token-appended", {
+          requestId,
+          proxyPath,
+          tokenAdded: payloadWithToken !== responseBody,
+          ...summarizeBodyPayload(payloadWithToken),
         });
+
+        return buildProxiedResponse(
+          req,
+          backendResponse.status,
+          responseHeaders,
+          payloadWithToken,
+        );
       }
 
-      if (typeof responseBody === "string") {
-        return new Response(responseBody, {
-          status: backendResponse.status,
-          headers: responseHeaders,
-        });
-      }
-
-      return new Response(JSON.stringify(responseBody), {
-        status: backendResponse.status,
-        headers: responseHeaders,
-      });
+      return buildProxiedResponse(
+        req,
+        backendResponse.status,
+        responseHeaders,
+        responseBody,
+      );
     } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      console.error("Gateway proxy error:", message);
+      const message = getErrorMessage(error);
+      logGatewayEvent("error", "proxy.failed", {
+        requestId,
+        proxyPath,
+        service,
+        durationMs: Date.now() - startedAt,
+        details: message,
+      });
       return jsonResponse(502, {
         error: "Gateway failed to reach destination server",
         details: message,

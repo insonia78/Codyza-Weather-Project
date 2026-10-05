@@ -3,6 +3,10 @@ import { WeatherProviderService } from './weather.service.js';
 describe('WeatherProviderService', () => {
   const originalFetch = global.fetch;
   const originalApiKey = process.env['GOOGLE_WEATHER_API_KEY'];
+  const createFetchResponse = (body: string): Response => ({
+    ok: true,
+    text: vi.fn().mockResolvedValue(body),
+  }) as unknown as Response;
 
   beforeEach(() => {
     process.env['GOOGLE_WEATHER_API_KEY'] = 'test-api-key';
@@ -20,10 +24,7 @@ describe('WeatherProviderService', () => {
   });
 
   it('returns an empty result set when the geocoder omits results for a text search', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      text: vi.fn().mockResolvedValue('{}'),
-    } as Response);
+    global.fetch = vi.fn().mockResolvedValue(createFetchResponse('{}'));
 
     const service = new WeatherProviderService();
 
@@ -31,10 +32,7 @@ describe('WeatherProviderService', () => {
   });
 
   it('returns the coordinate fallback when reverse geocoding omits results', async () => {
-    global.fetch = vi.fn().mockResolvedValue({
-      ok: true,
-      text: vi.fn().mockResolvedValue('{}'),
-    } as Response);
+    global.fetch = vi.fn().mockResolvedValue(createFetchResponse('{}'));
 
     const service = new WeatherProviderService();
 
@@ -80,11 +78,8 @@ describe('WeatherProviderService', () => {
             ],
           }),
         ),
-      } as Response)
-      .mockResolvedValueOnce({
-        ok: true,
-        text: vi.fn().mockResolvedValue('{}'),
-      } as Response);
+      } as unknown as Response)
+      .mockResolvedValueOnce(createFetchResponse('{}'));
 
     const service = new WeatherProviderService();
 
@@ -100,5 +95,42 @@ describe('WeatherProviderService', () => {
         source: 'search',
       },
     ]);
+  });
+
+  it('reuses cached search responses until they expire', async () => {
+    global.fetch = vi.fn().mockResolvedValue(
+      createFetchResponse(
+        JSON.stringify({
+          results: [
+            {
+              placeId: 'milan',
+              location: {
+                latitude: 45.4642,
+                longitude: 9.19,
+              },
+              formattedAddress: 'Milan, Italy',
+              addressComponents: [
+                {
+                  longText: 'Milan',
+                  types: ['locality'],
+                },
+                {
+                  longText: 'Italy',
+                  types: ['country'],
+                },
+              ],
+            },
+          ],
+        }),
+      ),
+    );
+
+    const service = new WeatherProviderService();
+
+    const firstResult = await service.searchLocations('Milan');
+    const secondResult = await service.searchLocations(' Milan ');
+
+    expect(secondResult).toEqual(firstResult);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 });

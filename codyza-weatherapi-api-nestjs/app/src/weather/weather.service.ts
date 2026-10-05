@@ -1,10 +1,10 @@
 import {
-  BadGatewayException,
   BadRequestException,
   Injectable,
   InternalServerErrorException,
   ServiceUnavailableException
 } from '@nestjs/common';
+import { type Cache, createCache } from 'cache-manager';
 
 import {
   CurrentConditionsHistorySummary,
@@ -15,11 +15,6 @@ import {
   WeatherDashboard,
   WeatherLocation
 } from './weather.models.js';
-
-interface CacheEntry<T> {
-  timestamp: number;
-  value: T;
-}
 
 interface OptionalRequestResult<T> {
   data: T | null;
@@ -198,7 +193,7 @@ interface ProviderErrorPayload {
 export class WeatherProviderService {
   readonly providerName = 'Google Maps Weather API';
 
-  private readonly memoryCache = new Map<string, CacheEntry<unknown>>();
+  private readonly cacheManager: Cache = createCache();
   private readonly pendingRequests = new Map<string, Promise<unknown>>();
   private readonly requestTimestamps: number[] = [];
 
@@ -394,7 +389,7 @@ export class WeatherProviderService {
   }
 
   private async request<T>(url: string, cacheKey: string, ttlMs: number, forceRefresh = false): Promise<T> {
-    const cachedValue = this.readCache<T>(cacheKey, ttlMs, forceRefresh);
+    const cachedValue = await this.readCache<T>(cacheKey, forceRefresh);
     if (cachedValue !== null) {
       return cachedValue;
     }
@@ -405,8 +400,8 @@ export class WeatherProviderService {
     }
 
     const requestPromise = this.executeRequest<T>(url)
-      .then((response) => {
-        this.writeCache(cacheKey, response);
+      .then(async (response) => {
+        await this.writeCache(cacheKey, response, ttlMs);
         return response;
       })
       .finally(() => {
@@ -456,24 +451,16 @@ export class WeatherProviderService {
     this.requestTimestamps.push(Date.now());
   }
 
-  private readCache<T>(cacheKey: string, ttlMs: number, forceRefresh: boolean): T | null {
+  private async readCache<T>(cacheKey: string, forceRefresh: boolean): Promise<T | null> {
     if (forceRefresh) {
       return null;
     }
 
-    const memoryEntry = this.memoryCache.get(cacheKey) as CacheEntry<T> | undefined;
-    if (memoryEntry && Date.now() - memoryEntry.timestamp < ttlMs) {
-      return memoryEntry.value;
-    }
-
-    return null;
+    return await this.cacheManager.get<T>(cacheKey) ?? null;
   }
 
-  private writeCache<T>(cacheKey: string, value: T): void {
-    this.memoryCache.set(cacheKey, {
-      timestamp: Date.now(),
-      value
-    });
+  private async writeCache<T>(cacheKey: string, value: T, ttlMs: number): Promise<void> {
+    await this.cacheManager.set(cacheKey, value, ttlMs);
   }
 
   private buildGeocodeUrl(query: string): string {
