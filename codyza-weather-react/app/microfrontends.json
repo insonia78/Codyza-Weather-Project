@@ -1,12 +1,12 @@
 {
   "$schema": "https://openapi.vercel.sh/microfrontends.json",
   "applications": {
-    "codyza-weather-react": {
+    "codyza-weather-project-2tnd":{
       "packageName": "app",
       "development": {
         "local": 3000,
         "task": "start",
-        "fallback": "codyza-weather-react.vercel.app"
+        "fallback": "codyza-weather-project-2tnd.vercel.app"
       }
     },
     "codyza-weather-angular": {
