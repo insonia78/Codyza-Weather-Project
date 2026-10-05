@@ -1,7 +1,8 @@
 {
   "$schema": "https://openapi.vercel.sh/microfrontends.json",
+  "version": "1",
   "applications": {
-    "codyza-weather-project-2tnd":{
+    "codyza-weather-project-2tnd": {
       "packageName": "app",
       "development": {
         "local": 3000,
@@ -23,4 +24,3 @@
       ]
     }
   }
-}
