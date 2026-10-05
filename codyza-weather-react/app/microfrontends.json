@@ -7,7 +7,7 @@
       "development": {
         "local": 3000,
         "task": "start",
-        "fallback": "codyza-weather-project-2tnd.vercel.app"
+        "fallback": "www.weath.site"
       }
     },
     "codyza-weather-angular": {
@@ -19,8 +19,9 @@
       },
       "routing": [
         {
-          "paths": ["/codyza-weather-angular"]
+          "paths": ["/codyza-weather-angular", "/codyza-weather-angular/:path*"]
         }
       ]
     }
   }
+}

@@ -55,10 +55,11 @@ For machine-specific overrides, add one of the ignored local files such as `.env
 
 The default microfrontends config lives in `microfrontends.json` at the app root.
 
-- `codyza-weather-react` maps to this Create React App project, whose `package.json` name is `app`
+- the default production Vercel project is `codyza-weather-project-2tnd`, which maps to this Create React App project whose `package.json` name is `app`
 - local development uses the existing `start` script on port `3000`
 - the child Angular microfrontend uses its `start` script on port `4200`
 - local fallback hosts point to each deployed Vercel application so routing still works if one app is not running locally
+- production routing sends both `/codyza-weather-angular` and `/codyza-weather-angular/*` to the Angular microfrontend
 
 ### `npm run eject`
 
