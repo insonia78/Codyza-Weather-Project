@@ -1,0 +1,115 @@
+{
+  "planHash": "11cf32e223c27eaab11f079f0cf1adaf3650697f9928af574b297bb217cdc769",
+  "phase": "baseline",
+  "recordedAtUtc": "2026-10-03T17:30:22.1689178Z",
+  "retryCount": 0,
+  "resetBaseline": false,
+  "complete": true,
+  "result": {
+    "setupSucceeded": true,
+    "setupDurationMs": 73703,
+    "setupFailureOutput": null,
+    "assertions": [
+      {
+        "name": "app-builds",
+        "kind": "process",
+        "verificationMethod": "exit-code",
+        "passed": true,
+        "timedOut": false,
+        "skipped": false,
+        "skippedReason": null,
+        "exitCode": 0,
+        "outputSample": "\r\n\u003E app@0.0.0 build\r\n\u003E ng build\r\n\r\n- Generating browser application bundles (phase: setup)...\r\n\u221A Browser application bundle generation complete.\r\n\u221A Browser application bundle generation complete.\r\n- Copying assets...\r\n\u221A Copying assets complete.\r\n- Generating index html...\r\n\u221A Index html generation complete.\r\n\r\nInitial Chunk Files           | Names         |  Raw Size | Estimated Transfer Size\r\nmain.ff358410e94d24b1.js      | main          | 444.42 kB |               112.85 kB\r\npolyfills.9ce60deabca90764.js | polyfills     |  33.12 kB |                10.69 kB\r\nstyles.6878e4e40b5da482.css   | styles        |  16.80 kB |                 3.84 kB\r\nruntime.ecbe48f95d996ad9.js   | runtime       |   1.05 kB |               599 bytes\r\n\r\n| Initial Total | 495.38 kB |               127.97 kB\r\n\r\nBuild at: 2026-10-03T17:29:38.015Z - Hash: a90b538546d15f36 - Time: 11054ms\r\n",
+        "durationMs": 33309
+      },
+      {
+        "name": "dev-server-serves-home",
+        "kind": "http-probe",
+        "verificationMethod": "http-status",
+        "passed": true,
+        "timedOut": false,
+        "skipped": false,
+        "skippedReason": null,
+        "exitCode": null,
+        "outputSample": "HTTP 200\n\u003C!doctype html\u003E\n\u003Chtml lang=\u0022en\u0022\u003E\n\u003Chead\u003E\n  \u003Cmeta charset=\u0022utf-8\u0022\u003E\n  \u003Ctitle\u003EApp\u003C/title\u003E\n  \u003Cbase href=\u0022/\u0022\u003E\n  \u003Cmeta name=\u0022viewport\u0022 content=\u0022width=device-width, initial-scale=1\u0022\u003E\n  \u003Clink rel=\u0022icon\u0022 type=\u0022image/x-icon\u0022 href=\u0022favicon.ico\u0022\u003E\n\u003Clink rel=\u0022stylesheet\u0022 href=\u0022styles.css\u0022\u003E\u003C/head\u003E\n\u003Cbody\u003E\n  \u003Capp-root\u003E\u003C/app-root\u003E\n\u003Cscript src=\u0022runtime.js\u0022 type=\u0022module\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022polyfills.js\u0022 type=\u0022module\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022styles.js\u0022 defer\u003E\u003C/script\u003E\u003Cscript src=\u0022vendor.js\u0022 type=\u0022module\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022main.js\u0022 type=\u0022module\u0022\u003E\u003C/script\u003E\u003C/body\u003E\n\u003C/html\u003E\n\n--- server output ---\n\r\n\u003E app@0.0.0 start\r\n\u003E ng serve --host 127.0.0.1 --port 4200\r\n\r\n- Generating browser application bundles (phase: setup)...\r\n\u221A Browser application bundle generation complete.\r\n",
+        "durationMs": 23012
+      },
+      {
+        "name": "tests-pass",
+        "kind": "process",
+        "verificationMethod": "test-results",
+        "passed": true,
+        "timedOut": false,
+        "skipped": false,
+        "skippedReason": null,
+        "exitCode": 0,
+        "outputSample": "\r\n\u003E app@0.0.0 test\r\n\u003E ng test --watch=false --browsers=ChromeHeadless\r\n\r\n- Generating browser application bundles (phase: setup)...\r\n\u221A Browser application bundle generation complete.\r\n03 10 2026 13:30:18.520:INFO [karma-server]: Karma v6.3.20 server started at http://localhost:9876/\r\n03 10 2026 13:30:18.524:INFO [launcher]: Launching browsers ChromeHeadless with concurrency unlimited\r\n03 10 2026 13:30:18.542:INFO [launcher]: Starting browser ChromeHeadless\r\n03 10 2026 13:30:20.389:INFO [Chrome Headless 154.0.0.0 (Windows 10)]: Connected on socket l0PyOvxOxINNmLp8AAAA with id 7969365\r\nChrome Headless 154.0.0.0 (Windows 10): Executed 0 of 3\u001B[32m SUCCESS\u001B[39m (0 secs / 0 secs)\r\n\u001B[1A\u001B[2KChrome Headless 154.0.0.0 (Windows 10): Executed 1 of 3\u001B[32m SUCCESS\u001B[39m (0 secs / 0.131 secs)\r\n\u001B[1A\u001B[2KChrome Headless 154.0.0.0 (Windows 10): Executed 2 of 3\u001B[32m SUCCESS\u001B[39m (0 secs / 0.136 secs)\r\n\u001B[1A\u001B[2KChrome Headless 154.0.0.0 (Windows 10): Executed 3 of 3\u001B[32m SUCCESS\u001B[39m (0 secs / 0.16 secs)\r\n\u001B[1A\u001B[2KChrome Headless 154.0.0.0 (Windows 10): Executed 3 of 3\u001B[32m SUCCESS\u001B[39m (0.174 secs / 0.16 secs)\r\n\u001B[32mTOTAL: 3 SUCCESS\u001B[39m\r\n",
+        "durationMs": 20794,
+        "testResults": {
+          "testFramework": "jasmine",
+          "runnerDetectedFrom": "package_json",
+          "testsTotal": 0,
+          "testsPassed": 0,
+          "testsFailed": 0,
+          "testsSkipped": 0,
+          "parseFailed": true
+        }
+      }
+    ],
+    "executions": [
+      {
+        "source": "setup[0]",
+        "resolvedExecutable": "C:\\Users\\default.LAPTOP-J5GV1TT8\\AppData\\Local\\Author Software\\nvm\\.nodejs\\npm.EXE",
+        "args": [
+          "ci"
+        ],
+        "cwd": "C:\\Users\\default.LAPTOP-J5GV1TT8\\OneDrive\\Documenti\\a_csc training\\codyza\\Codyza-Weather-Project\\codyza-weather-angular\\app",
+        "env": {},
+        "prependPath": [],
+        "platform": "win32"
+      },
+      {
+        "source": "app-builds",
+        "resolvedExecutable": "C:\\Users\\default.LAPTOP-J5GV1TT8\\AppData\\Local\\Author Software\\nvm\\.nodejs\\npm.EXE",
+        "args": [
+          "run",
+          "build"
+        ],
+        "cwd": "C:\\Users\\default.LAPTOP-J5GV1TT8\\OneDrive\\Documenti\\a_csc training\\codyza\\Codyza-Weather-Project\\codyza-weather-angular\\app",
+        "env": {},
+        "prependPath": [],
+        "platform": "win32"
+      },
+      {
+        "source": "dev-server-serves-home",
+        "resolvedExecutable": "C:\\Users\\default.LAPTOP-J5GV1TT8\\AppData\\Local\\Author Software\\nvm\\.nodejs\\npm.EXE",
+        "args": [
+          "start",
+          "--",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "4200"
+        ],
+        "cwd": "C:\\Users\\default.LAPTOP-J5GV1TT8\\OneDrive\\Documenti\\a_csc training\\codyza\\Codyza-Weather-Project\\codyza-weather-angular\\app",
+        "env": {},
+        "prependPath": [],
+        "platform": "win32"
+      },
+      {
+        "source": "tests-pass",
+        "resolvedExecutable": "C:\\Users\\default.LAPTOP-J5GV1TT8\\AppData\\Local\\Author Software\\nvm\\.nodejs\\npm.EXE",
+        "args": [
+          "test",
+          "--",
+          "--watch=false",
+          "--browsers=ChromeHeadless"
+        ],
+        "cwd": "C:\\Users\\default.LAPTOP-J5GV1TT8\\OneDrive\\Documenti\\a_csc training\\codyza\\Codyza-Weather-Project\\codyza-weather-angular\\app",
+        "env": {},
+        "prependPath": [],
+        "platform": "win32"
+      }
+    ]
+  }
+}

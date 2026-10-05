@@ -1,0 +1,53 @@
+import React from "react";
+import { Form, Link, useActionData, useNavigation } from 'react-router-dom';
+import type { LoginActionData } from './route';
+import styles from './css/styles.module.css';
+
+const Login = () => {  
+  const actionData = useActionData() as LoginActionData | undefined;
+  const navigation = useNavigation();
+  const errors = actionData?.errors ?? [];
+  const isSubmitting = navigation.state === 'submitting';
+    
+  return (
+    <main className={styles.page}>
+      <section className={styles.card}>
+      <p className={styles.eyebrow}>Welcome back</p>
+      <h1 className={styles.title}>Login</h1>
+      <p className={styles.description}>Access your weather dashboard and saved locations.</p>
+      {errors.length > 0 && (
+        <div className={styles.errorBox}>
+          <h2>Validation Errors:</h2>
+          <ul>
+            {errors.map((error, index) => (
+              <li key={index}>{error}</li>
+            ))}
+          </ul>
+        </div>
+      )}
+      {actionData?.success && (
+        <div className={styles.successBox}>{actionData.success}</div>
+      )}
+      <Form className={styles.form} method="post" noValidate>
+        <label className={styles.field} htmlFor="email">
+          <span>Email</span>
+          <input type="email" id="email" name="email" defaultValue={actionData?.values?.email ?? ''} required />
+        </label>
+        <label className={styles.field} htmlFor="password">
+          <span>Password</span>
+          <input type="password" id="password" name="password" required />
+        </label>
+        <button className={styles.submitButton} type="submit" disabled={isSubmitting}>
+          {isSubmitting ? 'Submitting...' : 'Login'}
+        </button>
+      </Form>
+      <div className={styles.footerLinks}>
+        <Link to="/registration">Create an account</Link>
+        <Link to="/reset-password">Forgot password?</Link>
+      </div>
+      </section>
+    </main>
+  );
+};
+
+export default Login;

@@ -1,0 +1,461 @@
+<div class="weather-app" [ngClass]="backgroundClass()">
+  <header class="hero">
+    <div class="hero__copy">
+      <p class="eyebrow">Live global weather intelligence</p>
+      <h1>{{ title }}</h1>
+      <p class="hero__summary">
+        Production-style frontend for live worldwide weather, geocoded location search, hourly forecast,
+        daily outlook, recent history, and automatic refresh using {{ providerName }}.
+      </p>
+    </div>
+
+    <div class="hero__toolbar">
+      <div class="toolbar-group">
+        <span class="toolbar-label">Temperature</span>
+        <button type="button" class="segmented-button" [class.is-active]="temperatureUnit === 'celsius'" (click)="setTemperatureUnit('celsius')">C</button>
+        <button type="button" class="segmented-button" [class.is-active]="temperatureUnit === 'fahrenheit'" (click)="setTemperatureUnit('fahrenheit')">F</button>
+      </div>
+
+      <div class="toolbar-group">
+        <span class="toolbar-label">Units</span>
+        <button type="button" class="segmented-button" [class.is-active]="measurementSystem === 'metric'" (click)="setMeasurementSystem('metric')">Metric</button>
+        <button type="button" class="segmented-button" [class.is-active]="measurementSystem === 'imperial'" (click)="setMeasurementSystem('imperial')">Imperial</button>
+      </div>
+
+      <div class="toolbar-group toolbar-group--switch">
+        <span class="toolbar-label">Auto refresh</span>
+        <button type="button" class="toggle-button" [class.is-active]="autoRefresh" (click)="setAutoRefresh(!autoRefresh)">
+          {{ autoRefresh ? 'On' : 'Off' }}
+        </button>
+      </div>
+
+      <button
+        type="button"
+        class="primary-button"
+        [disabled]="!activeDashboard || refreshInProgress || loadingWeather"
+        (click)="refreshWeather(true)">
+        {{ refreshInProgress ? 'Refreshing...' : 'Refresh now' }}
+      </button>
+      <button
+        type="button"
+        class="secondary-button"
+        (click)="logout()">
+        Logout
+      </button>
+    </div>
+  </header>
+
+  <section class="status-stack">
+    @if (!hasApiKey) {
+      <app-status-banner tone="warning" [message]="'Configure the Nest weather API base URL in the environment files to turn on geocoding, current conditions, hourly forecast, daily forecast, and history.'"></app-status-banner>
+    }
+    @if (!hasMapsApiKey) {
+      <app-status-banner tone="info" [message]="'Add a public Google Maps JavaScript API key in the environment files if you want the interactive map enabled in the browser.'"></app-status-banner>
+    }
+    @if (offlineMessage) {
+      <app-status-banner tone="warning" [message]="offlineMessage"></app-status-banner>
+    }
+    @if (errorMessage) {
+      <app-status-banner tone="danger" [message]="errorMessage"></app-status-banner>
+    }
+    @if (staleMessage) {
+      <app-status-banner tone="warning" [message]="staleMessage"></app-status-banner>
+    }
+    @if (apiMessage) {
+      <app-status-banner tone="info" [message]="apiMessage"></app-status-banner>
+    }
+    @for (warning of warningMessages; track warning) {
+      <app-status-banner tone="info" [message]="warning"></app-status-banner>
+    }
+  </section>
+
+  <section class="search-shell panel">
+    <div class="panel__header">
+      <div>
+        <p class="panel__eyebrow">Search and discovery</p>
+        <h2>City, address, postal code, or coordinates</h2>
+      </div>
+      <button type="button" class="secondary-button" (click)="useCurrentLocation()">Use current location</button>
+    </div>
+
+    <div class="search-box">
+      <input
+        type="text"
+        class="search-input"
+        [ngModel]="searchQuery"
+        (ngModelChange)="onSearchChange($event)"
+        (keyup.enter)="triggerSearch()"
+        placeholder="Try Rome, Italy • 10001 • 41.9028,12.4964" />
+      <button
+        type="button"
+        class="primary-button search-button"
+        [disabled]="!canSearch"
+        (click)="triggerSearch()">
+        @if (loadingSearch) {
+          <span class="search-spinner" aria-hidden="true"></span>
+        }
+        <span>{{ loadingSearch ? 'Searching...' : 'Search' }}</span>
+      </button>
+      <button
+        type="button"
+        class="tertiary-button search-clear-button"
+        [disabled]="!searchQuery.trim().length && !searchResults.length"
+        (click)="clearSearch()"
+        aria-label="Clear search">
+        Clear
+      </button>
+    </div>
+
+    <div class="search-results-shell">
+      @if (loadingSearch) {
+        <div class="search-overlay" aria-live="polite">
+          <div class="search-overlay__content">
+            <span class="search-spinner search-spinner--large" aria-hidden="true"></span>
+            <span class="search-state">Searching for matching locations...</span>
+          </div>
+        </div>
+      }
+      @if (searchResults.length) {
+        <div class="results-grid">
+          @for (location of searchResults; track trackByLocation($index, location)) {
+            <button type="button" class="result-card" (click)="selectLocation(location)">
+              <strong>{{ location.name }}</strong>
+              <span>{{ location.label }}</span>
+            </button>
+          }
+        </div>
+      }
+    </div>
+
+    @if (recentSearches.length) {
+      <div class="tag-section">
+        <h3>Recent searches</h3>
+        <div class="tag-list">
+          @for (location of recentSearches; track trackByLocation($index, location)) {
+            <button type="button" class="tag" (click)="selectLocation(location)">
+              {{ location.label }}
+            </button>
+          }
+        </div>
+      </div>
+    }
+  </section>
+
+  <main class="dashboard-grid">
+    @if (activeDashboard; as dashboard) {
+      <section class="panel panel--hero">
+        <div class="panel__header">
+          <div>
+            <p class="panel__eyebrow">Live conditions</p>
+            <h2>{{ dashboard.location.label }}</h2>
+            <p class="panel__subtext">
+              Local time {{ currentLocalTime() }} · Last provider sync {{ formatDateTime(dashboard.fetchedAt / 1000, dashboard.timezone, { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' }) }}
+            </p>
+          </div>
+          <div class="action-row">
+            <button type="button" class="secondary-button" (click)="toggleFavorite(dashboard.location)">
+              {{ isFavorite(dashboard.location) ? 'Remove favorite' : 'Save favorite' }}
+            </button>
+            <button type="button" class="secondary-button" (click)="addToComparison(dashboard.location)">Compare</button>
+          </div>
+        </div>
+        <div class="current-weather">
+          <div class="current-weather__primary">
+            <div class="weather-icon">
+              @if (isWeatherIconUrl(dashboard.current.icon)) {
+                <img class="weather-icon__image" [src]="dashboard.current.icon" [alt]="dashboard.current.description" />
+              } @else {
+                <span>{{ weatherGlyph(dashboard.current.icon) }}</span>
+              }
+            </div>
+            <div>
+              <div class="temperature">{{ formatTemperature(dashboard.current.temperatureC) }}</div>
+              <div class="temperature-meta">
+                Feels like {{ formatTemperature(dashboard.current.feelsLikeC) }} · {{ dashboard.current.description }}
+              </div>
+            </div>
+          </div>
+          <div class="current-weather__details">
+            <div class="detail-chip">
+              <span>Sunrise</span>
+              <strong>{{ formatDateTime(dashboard.current.sunrise, dashboard.timezone, { hour: '2-digit', minute: '2-digit' }) }}</strong>
+            </div>
+            <div class="detail-chip">
+              <span>Sunset</span>
+              <strong>{{ formatDateTime(dashboard.current.sunset, dashboard.timezone, { hour: '2-digit', minute: '2-digit' }) }}</strong>
+            </div>
+            <div class="detail-chip">
+              <span>Wind</span>
+              <strong>{{ formatWind(dashboard.current.windSpeedMs) }} {{ formatWindDirection(dashboard.current.windDeg) }}</strong>
+            </div>
+            <div class="detail-chip">
+              <span>Visibility</span>
+              <strong>{{ formatVisibility(dashboard.current.visibilityM) }}</strong>
+            </div>
+          </div>
+        </div>
+        <div class="metric-grid">
+          <app-metric-card label="Humidity" [value]="dashboard.current.humidity + '%'"></app-metric-card>
+          <app-metric-card label="Pressure" [value]="formatPressure(dashboard.current.pressure)"></app-metric-card>
+          <app-metric-card label="UV index" [value]="(dashboard.current.uvIndex | number:'1.0-1') ?? '--'"></app-metric-card>
+          <app-metric-card label="Cloud cover" [value]="dashboard.current.cloudCover + '%'"></app-metric-card>
+          <app-metric-card label="Dew point" [value]="formatTemperature(dashboard.current.dewPointC)"></app-metric-card>
+          <app-metric-card label="Precipitation" [value]="formatPrecipitation(dashboard.current.precipitationMm)"></app-metric-card>
+        </div>
+      </section>
+    } @else {
+      <section class="panel panel--hero empty-state">
+        <div>
+          <p class="panel__eyebrow">Ready for live weather</p>
+          <h2>Search any location to start</h2>
+          <p>
+            Search for a city, address, postal code, or coordinates, or click the map to load live weather for any point.
+          </p>
+        </div>
+      </section>
+    }
+
+    <section class="panel panel--map">
+      <div class="panel__header">
+        <div>
+          <p class="panel__eyebrow">Interactive map</p>
+          <h2>{{ supportsWeatherLayers ? 'Global weather layers' : 'Live location map' }}</h2>
+        </div>
+        @if (supportsWeatherLayers) {
+          <select class="layer-select" [ngModel]="selectedMapLayer" (ngModelChange)="setMapLayer($event)">
+            @for (layer of layerOptions; track layer) {
+              <option [ngValue]="layer.key">{{ layer.label }}</option>
+            }
+          </select>
+        } @else {
+          <p class="panel__subtext">Your Google Maps demo key powers the base map, location clicks, and geocoded weather lookups for this view.</p>
+        }
+      </div>
+      @if (hasMapsApiKey) {
+        <div #mapElement class="map-canvas"></div>
+        <p class="panel__subtext">Click anywhere on the map to reverse-search coordinates and load live weather for that point.</p>
+      } @else {
+        <div class="map-canvas"></div>
+        <p class="panel__subtext">Add a public Google Maps JavaScript API key to re-enable the interactive map in the browser.</p>
+      }
+    </section>
+
+    @if (activeDashboard; as dashboard) {
+      <section class="panel">
+        <div class="panel__header">
+          <div>
+            <p class="panel__eyebrow">Recent conditions</p>
+            <h2>Last 24-hour summary</h2>
+          </div>
+          <p class="panel__subtext">Derived from the current conditions history returned by {{ providerName }}.</p>
+        </div>
+        @if (dashboard.currentHistory; as currentHistory) {
+          <div class="metric-grid">
+            <app-metric-card label="Temperature change" [value]="formatTemperature(currentHistory.temperatureChangeC)"></app-metric-card>
+            <app-metric-card label="24h high" [value]="formatTemperature(currentHistory.maxTemperatureC)"></app-metric-card>
+            <app-metric-card label="24h low" [value]="formatTemperature(currentHistory.minTemperatureC)"></app-metric-card>
+            <app-metric-card label="24h precipitation" [value]="formatPrecipitation(currentHistory.precipitationMm)"></app-metric-card>
+          </div>
+        } @else {
+          <p class="empty-copy">A recent 24-hour conditions summary was not returned for this location.</p>
+        }
+      </section>
+      <section class="panel panel--hourly">
+        <div class="panel__header">
+          <div>
+            <p class="panel__eyebrow">Hourly forecast</p>
+            <h2>Next 12 hours</h2>
+          </div>
+        </div>
+        <div class="hourly-grid">
+          @for (point of dashboard.hourly; track trackByHourlyPoint($index, point)) {
+            <article class="hour-card">
+              <span>{{ formatDateTime(point.timestamp, dashboard.timezone, { hour: '2-digit', minute: '2-digit' }) }}</span>
+              <strong>{{ formatTemperature(point.temperatureC) }}</strong>
+              <span>{{ point.summary }}</span>
+              <span>Rain {{ point.precipitationProbability }}%</span>
+              <span>Wind {{ formatWind(point.windSpeedMs) }}</span>
+            </article>
+          }
+        </div>
+      </section>
+      <section class="panel panel--forecast">
+        <div class="panel__header">
+          <div>
+            <p class="panel__eyebrow">Daily outlook</p>
+            <h2>{{ dashboard.providerForecastDays }}-day forecast</h2>
+          </div>
+          <p class="panel__subtext">{{ providerName }} currently exposes {{ dashboard.providerForecastDays }} daily forecast periods in this dashboard.</p>
+        </div>
+        <div class="daily-grid">
+          @for (day of dashboard.daily; track trackByDailyPoint($index, day)) {
+            <article class="day-card">
+              <span>{{ formatDateTime(day.timestamp, dashboard.timezone, { weekday: 'short' }) }}</span>
+              <strong>{{ formatTemperature(day.maxTempC) }}</strong>
+              <span>{{ formatTemperature(day.minTempC) }}</span>
+              <span>{{ day.summary }}</span>
+              <span>Rain {{ day.precipitationProbability }}%</span>
+            </article>
+          }
+        </div>
+      </section>
+      <section class="panel panel--charts">
+        <div class="panel__header">
+          <div>
+            <p class="panel__eyebrow">Weather charts</p>
+            <h2>Temperature, precipitation, and wind graphs</h2>
+          </div>
+        </div>
+        <div class="chart-grid">
+          @if (temperatureChart) {
+            <article class="chart-card">
+              <div class="chart-card__header">
+                <strong>Temperature trend</strong>
+                <span>{{ temperatureChart.minLabel }} to {{ temperatureChart.maxLabel }}</span>
+              </div>
+              <svg viewBox="0 0 700 200" preserveAspectRatio="none">
+                <polygon [attr.points]="temperatureChart.area" class="chart-area chart-area--temperature"></polygon>
+                <polyline [attr.points]="temperatureChart.points" class="chart-line chart-line--temperature"></polyline>
+                @for (label of temperatureChart.labels; track label) {
+                  <text [attr.x]="label.x" [attr.y]="label.y">{{ label.value }}</text>
+                }
+              </svg>
+            </article>
+          }
+          @if (precipitationChart) {
+            <article class="chart-card">
+              <div class="chart-card__header">
+                <strong>Precipitation probability</strong>
+                <span>{{ precipitationChart.minLabel }} to {{ precipitationChart.maxLabel }}</span>
+              </div>
+              <svg viewBox="0 0 700 200" preserveAspectRatio="none">
+                <polygon [attr.points]="precipitationChart.area" class="chart-area chart-area--precipitation"></polygon>
+                <polyline [attr.points]="precipitationChart.points" class="chart-line chart-line--precipitation"></polyline>
+                @for (label of precipitationChart.labels; track label) {
+                  <text [attr.x]="label.x" [attr.y]="label.y">{{ label.value }}</text>
+                }
+              </svg>
+            </article>
+          }
+          @if (windChart) {
+            <article class="chart-card">
+              <div class="chart-card__header">
+                <strong>Wind speed</strong>
+                <span>{{ windChart.minLabel }} to {{ windChart.maxLabel }}</span>
+              </div>
+              <svg viewBox="0 0 700 200" preserveAspectRatio="none">
+                <polygon [attr.points]="windChart.area" class="chart-area chart-area--wind"></polygon>
+                <polyline [attr.points]="windChart.points" class="chart-line chart-line--wind"></polyline>
+                @for (label of windChart.labels; track label) {
+                  <text [attr.x]="label.x" [attr.y]="label.y">{{ label.value }}</text>
+                }
+              </svg>
+            </article>
+          }
+        </div>
+      </section>
+      <section class="panel">
+        <div class="panel__header">
+          <div>
+            <p class="panel__eyebrow">Saved places</p>
+            <h2>Favorites and recents</h2>
+          </div>
+        </div>
+        <div class="saved-grid">
+          <div>
+            <h3>Favorites</h3>
+            @if (favorites.length) {
+              <div class="saved-list">
+                @for (location of favorites; track trackByLocation($index, location)) {
+                  <article class="saved-card">
+                    <strong>{{ location.label }}</strong>
+                    <div class="action-row">
+                      <button type="button" class="tertiary-button" (click)="selectLocation(location)">Open</button>
+                      <button type="button" class="tertiary-button" (click)="addToComparison(location)">Compare</button>
+                      <button type="button" class="tertiary-button" (click)="removeFavorite(location)">Remove</button>
+                    </div>
+                  </article>
+                }
+              </div>
+            } @else {
+              <p class="empty-copy">Save favorite locations for fast access and multi-city comparison.</p>
+            }
+          </div>
+          <div>
+            <h3>Recent searches</h3>
+            @if (recentSearches.length) {
+              <div class="saved-list">
+                @for (location of recentSearches; track trackByLocation($index, location)) {
+                  <article class="saved-card">
+                    <strong>{{ location.label }}</strong>
+                    <div class="action-row">
+                      <button type="button" class="tertiary-button" (click)="selectLocation(location)">Open</button>
+                      <button type="button" class="tertiary-button" (click)="addToComparison(location)">Compare</button>
+                    </div>
+                  </article>
+                }
+              </div>
+            }
+          </div>
+        </div>
+      </section>
+      <section class="panel">
+        <div class="panel__header">
+          <div>
+            <p class="panel__eyebrow">Multi-city comparison</p>
+            <h2>Compare up to five locations</h2>
+          </div>
+        </div>
+        @if (comparisonSnapshots.length) {
+          <div class="comparison-grid">
+            @for (comparison of comparisonSnapshots; track comparison) {
+              <article class="comparison-card">
+                <div class="comparison-card__header">
+                  <strong>{{ comparison.location.name }}</strong>
+                  <button type="button" class="tertiary-button" (click)="removeComparison(comparison.location.id)">Remove</button>
+                </div>
+                <span>{{ comparison.location.country }}</span>
+                <strong>{{ formatTemperature(comparison.temperatureC) }}</strong>
+                <span>Feels like {{ formatTemperature(comparison.feelsLikeC) }}</span>
+                <span>Humidity {{ comparison.humidity }}%</span>
+                <span>Wind {{ formatWind(comparison.windSpeedMs) }}</span>
+                <span>Rain {{ comparison.precipitationProbability }}%</span>
+              </article>
+            }
+          </div>
+        } @else {
+          <p class="empty-copy">Use Compare on the active location, a favorite, or a recent search to build side-by-side views.</p>
+        }
+      </section>
+      <section class="panel">
+        <div class="panel__header">
+          <div>
+            <p class="panel__eyebrow">Historical weather</p>
+            <h2>Recent hourly history</h2>
+          </div>
+          <p class="panel__subtext">Google Weather API returns recent hourly history when it is available for the selected location.</p>
+        </div>
+        @if (dashboard.historical?.points?.length) {
+          <div class="hourly-grid">
+            @for (point of dashboard.historical?.points; track point) {
+              <article class="hour-card">
+                <span>{{ formatDateTime(point.timestamp, dashboard.timezone, { hour: '2-digit', minute: '2-digit', weekday: 'short' }) }}</span>
+                <strong>{{ formatTemperature(point.temperatureC) }}</strong>
+                <span>{{ point.summary }}</span>
+                <span>Rain {{ point.precipitationProbability }}%</span>
+              </article>
+            }
+          </div>
+        } @else {
+          <p class="empty-copy">Recent hourly history is unavailable for this location or current {{ providerName }} demo-key configuration.</p>
+        }
+      </section>
+    }
+  </main>
+
+
+
+
+
+
+  </div>

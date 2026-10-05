@@ -1,0 +1,17 @@
+{
+  "$schema": "https://openapi.vercel.sh/microfrontends.json",
+  "applications": {
+    "codyza-weather-react": {
+      "development": {
+        "fallback": "codyza-weather-react.vercel.app"
+      }
+    },
+    "codyza-weather-angular": {
+      "routing": [
+        {
+          "paths": ["/codyza-weather-angular"]
+        }
+      ]
+    }
+  }
+}

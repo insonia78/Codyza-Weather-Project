@@ -1,0 +1,115 @@
+{
+  "planHash": "11cf32e223c27eaab11f079f0cf1adaf3650697f9928af574b297bb217cdc769",
+  "phase": "postupgrade",
+  "recordedAtUtc": "2026-10-03T18:16:51.1717507Z",
+  "retryCount": 0,
+  "resetBaseline": false,
+  "complete": true,
+  "result": {
+    "setupSucceeded": true,
+    "setupDurationMs": 66185,
+    "setupFailureOutput": null,
+    "assertions": [
+      {
+        "name": "app-builds",
+        "kind": "process",
+        "verificationMethod": "exit-code",
+        "passed": true,
+        "timedOut": false,
+        "skipped": false,
+        "skippedReason": null,
+        "exitCode": 0,
+        "outputSample": "\r\n\u003E app@0.0.0 build\r\n\u003E ng build\r\n\r\n- Generating browser application bundles (phase: setup)...\r\n\u001B[32m\u221A\u001B[39m Browser application bundle generation complete.\r\n\u001B[32m\u221A\u001B[39m Browser application bundle generation complete.\r\n- Copying assets...\r\n\u001B[32m\u221A\u001B[39m Copying assets complete.\r\n- Generating index html...\r\n\u001B[32m\u221A\u001B[39m Index html generation complete.\r\n\r\n\u001B[1mInitial chunk files\u001B[22m          \u001B[2m | \u001B[22m\u001B[1mNames\u001B[22m        \u001B[2m | \u001B[22m \u001B[1mRaw size\u001B[22m\u001B[2m | \u001B[22m\u001B[1mEstimated transfer size\u001B[22m\r\n\u001B[32mmain.65e4f3f4c8220198.js\u001B[39m     \u001B[2m | \u001B[22m\u001B[2mmain\u001B[22m         \u001B[2m | \u001B[22m\u001B[36m397.63 kB\u001B[39m\u001B[2m | \u001B[22m              \u001B[36m104.81 kB\u001B[39m\r\n\u001B[32mpolyfills.b52e8c99ea5eaf97.js\u001B[39m\u001B[2m | \u001B[22m\u001B[2mpolyfills\u001B[22m    \u001B[2m | \u001B[22m \u001B[36m34.85 kB\u001B[39m\u001B[2m | \u001B[22m               \u001B[36m11.33 kB\u001B[39m\r\n\u001B[32mstyles.41e4b2f13fb8412e.css\u001B[39m  \u001B[2m | \u001B[22m\u001B[2mstyles\u001B[22m       \u001B[2m | \u001B[22m \u001B[36m17.11 kB\u001B[39m\u001B[2m | \u001B[22m                \u001B[36m3.91 kB\u001B[39m\r\n\u001B[32mruntime.83702764ef6c6780.js\u001B[39m  \u001B[2m | \u001B[22m\u001B[2mruntime\u001B[22m      \u001B[2m | \u001B[22m  \u001B[36m1.07 kB\u001B[39m\u001B[2m | \u001B[22m              \u001B[36m596 bytes\u001B[39m\r\n\r\n\u001B[1m \u001B[22m                            \u001B[2m | \u001B[22m\u001B[1mInitial total\u001B[22m\u001B[2m | \u001B[22m\u001B[1m450.66 kB\u001B[22m\u001B[2m | \u001B[22m              \u001B[1m120.65 kB\u001B[22m\r\n\r\nBuild at: 2026-10-03T18:16:09.001Z - Hash: 5dec53335e1eac2e - Time: 8055ms\r\n\u001B[1m\u001B[33m\r\nWarning: C:\\Users\\default.LAPTOP-J5GV1TT8\\OneDrive\\Documenti\\a_csc training\\codyza\\Codyza-Weather-Project\\codyza-weather-angular\\app\\src\\app\\app.component.ts depends on \u0027leaflet\u0027. CommonJS or AMD dependencies can cause optimization bailouts.\r\nFor more info see: https://angular.dev/tools/cli/build#configuring-commonjs-dependencies\r\n\r\n\u001B[39m\u001B[22m\r\n",
+        "durationMs": 25219
+      },
+      {
+        "name": "dev-server-serves-home",
+        "kind": "http-probe",
+        "verificationMethod": "http-status",
+        "passed": true,
+        "timedOut": false,
+        "skipped": false,
+        "skippedReason": null,
+        "exitCode": null,
+        "outputSample": "HTTP 200\n\u003C!doctype html\u003E\n\u003Chtml lang=\u0022en\u0022\u003E\n\u003Chead\u003E\n  \u003Cmeta charset=\u0022utf-8\u0022\u003E\n  \u003Ctitle\u003EApp\u003C/title\u003E\n  \u003Cbase href=\u0022/\u0022\u003E\n  \u003Cmeta name=\u0022viewport\u0022 content=\u0022width=device-width, initial-scale=1\u0022\u003E\n  \u003Clink rel=\u0022icon\u0022 type=\u0022image/x-icon\u0022 href=\u0022favicon.ico\u0022\u003E\n\u003Clink rel=\u0022stylesheet\u0022 href=\u0022styles.css\u0022\u003E\u003C/head\u003E\n\u003Cbody\u003E\n  \u003Capp-root\u003E\u003C/app-root\u003E\n\u003Cscript src=\u0022runtime.js\u0022 type=\u0022module\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022polyfills.js\u0022 type=\u0022module\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022styles.js\u0022 defer\u003E\u003C/script\u003E\u003Cscript src=\u0022vendor.js\u0022 type=\u0022module\u0022\u003E\u003C/script\u003E\u003Cscript src=\u0022main.js\u0022 type=\u0022module\u0022\u003E\u003C/script\u003E\u003C/body\u003E\n\u003C/html\u003E\n\n--- server output ---\n\r\n\u003E app@0.0.0 start\r\n\u003E ng serve --host 127.0.0.1 --port 4200\r\n\r\n- Generating browser application bundles (phase: setup)...\r\n\u001B[32m\u221A\u001B[39m Browser application bundle generation complete.\r\n\r\n\u001B[1mInitial chunk files\u001B[22m  \u001B[2m | \u001B[22m\u001B[1mNames\u001B[22m        \u001B[2m | \u001B[22m \u001B[1mRaw size\u001B[22m\r\n\u001B[32mvendor.js\u001B[39m            \u001B[2m | \u001B[22m\u001B[2mvendor\u001B[22m       \u001B[2m | \u001B[22m  \u001B[36m2.50 MB\u001B[39m\u001B[2m | \u001B[22m\r\n\u001B[32mpolyfills.js\u001B[39m         \u001B[2m | \u001B[22m\u001B[2mpolyfills\u001B[22m    \u001B[2m | \u001B[22m\u001B[36m248.94 kB\u001B[39m\u001B[2m | \u001B[22m\r\n\u001B[32mstyles.css, styles.js\u001B[39m\u001B[2m | \u001B[22m\u001B[2mstyles\u001B[22m       \u001B[2m | \u001B[22m\u001B[36m153.67 kB\u001B[39m\u001B[2m | \u001B[22m\r\n\u001B[32mmain.js\u001B[39m              \u001B[2m | \u001B[22m\u001B[2mmain\u001B[22m         \u001B[2m | \u001B[22m\u001B[36m135.78 kB\u001B[39m\u001B[2m | \u001B[22m\r\n\u001B[32mruntime.js\u001B[39m           \u001B[2m | \u001B[22m\u001B[2mruntime\u001B[22m      \u001B[2m | \u001B[22m  \u001B[36m6.92 kB\u001B[39m\u001B[2m | \u001B[22m\r\n\r\n\u001B[1m \u001B[22m                    \u001B[2m | \u001B[22m\u001B[1mInitial total\u001B[22m\u001B[2m | \u001B[22m  \u001B[1m3.04 MB\u001B[22m\r\n\r\nBuild at: 2026-10-03T18:16:31.823Z - Hash: e606b6b7eeee53b0 - Time: 14278ms\r\n\u001B[1m\u001B[33m\r\nWarning: C:\\Users\\default.LAPTOP-J5GV1TT8\\OneDrive\\Documenti\\a_csc training\\codyza\\Codyza-Weather-Project\\codyza-weather-angular\\app\\src\\app\\app.component.ts depends on \u0027leaflet\u0027. CommonJS or AMD dependencies can cause optimization bailouts.\r\nFor more info see: https://angular.dev/tools/cli/build#configuring-commonjs-dependencies\r\n\r\n\u001B[39m\u001B[22m\r\n\r\n** Angular Live Development Server is listening on 127.0.0.1:4200, open your browser on http://127.0.0.1:4200/ **\r\n\r\n\r\n\u221A Compiled successfully.\r\n",
+        "durationMs": 22849
+      },
+      {
+        "name": "tests-pass",
+        "kind": "process",
+        "verificationMethod": "test-results",
+        "passed": true,
+        "timedOut": false,
+        "skipped": false,
+        "skippedReason": null,
+        "exitCode": 0,
+        "outputSample": "\r\n\u003E app@0.0.0 test\r\n\u003E ng test --watch=false --browsers=ChromeHeadless\r\n\r\n- Generating browser application bundles (phase: setup)...\r\n\u001B[32m\u221A\u001B[39m Browser application bundle generation complete.\r\n\u001B[32m03 10 2026 14:16:46.835:INFO [karma-server]: \u001B[39mKarma v6.3.20 server started at http://localhost:9876/\r\n\u001B[32m03 10 2026 14:16:46.843:INFO [launcher]: \u001B[39mLaunching browsers ChromeHeadless with concurrency unlimited\r\n\u001B[32m03 10 2026 14:16:46.893:INFO [launcher]: \u001B[39mStarting browser ChromeHeadless\r\n\u001B[32m03 10 2026 14:16:48.997:INFO [Chrome Headless 154.0.0.0 (Windows 10)]: \u001B[39mConnected on socket yq0xhmIScmtL-MiAAAAA with id 63398407\r\nChrome Headless 154.0.0.0 (Windows 10): Executed 0 of 3\u001B[32m SUCCESS\u001B[39m (0 secs / 0 secs)\r\n\u001B[1A\u001B[2KChrome Headless 154.0.0.0 (Windows 10): Executed 1 of 3\u001B[32m SUCCESS\u001B[39m (0 secs / 0.274 secs)\r\n\u001B[1A\u001B[2KChrome Headless 154.0.0.0 (Windows 10): Executed 2 of 3\u001B[32m SUCCESS\u001B[39m (0 secs / 0.299 secs)\r\n\u001B[1A\u001B[2KChrome Headless 154.0.0.0 (Windows 10): Executed 3 of 3\u001B[32m SUCCESS\u001B[39m (0 secs / 0.309 secs)\r\n\u001B[1A\u001B[2KChrome Headless 154.0.0.0 (Windows 10): Executed 3 of 3\u001B[32m SUCCESS\u001B[39m (0.33 secs / 0.309 secs)\r\n\u001B[32mTOTAL: 3 SUCCESS\u001B[39m\r\n\u001B[32m\u221A\u001B[39m Browser application bundle generation complete.\r\n",
+        "durationMs": 18983,
+        "testResults": {
+          "testFramework": "jasmine",
+          "runnerDetectedFrom": "package_json",
+          "testsTotal": 0,
+          "testsPassed": 0,
+          "testsFailed": 0,
+          "testsSkipped": 0,
+          "parseFailed": true
+        }
+      }
+    ],
+    "executions": [
+      {
+        "source": "setup[0]",
+        "resolvedExecutable": "C:\\Users\\default.LAPTOP-J5GV1TT8\\AppData\\Local\\Author Software\\nvm\\.nodejs\\npm.EXE",
+        "args": [
+          "ci"
+        ],
+        "cwd": "C:\\Users\\default.LAPTOP-J5GV1TT8\\OneDrive\\Documenti\\a_csc training\\codyza\\Codyza-Weather-Project\\codyza-weather-angular\\app",
+        "env": {},
+        "prependPath": [],
+        "platform": "win32"
+      },
+      {
+        "source": "app-builds",
+        "resolvedExecutable": "C:\\Users\\default.LAPTOP-J5GV1TT8\\AppData\\Local\\Author Software\\nvm\\.nodejs\\npm.EXE",
+        "args": [
+          "run",
+          "build"
+        ],
+        "cwd": "C:\\Users\\default.LAPTOP-J5GV1TT8\\OneDrive\\Documenti\\a_csc training\\codyza\\Codyza-Weather-Project\\codyza-weather-angular\\app",
+        "env": {},
+        "prependPath": [],
+        "platform": "win32"
+      },
+      {
+        "source": "dev-server-serves-home",
+        "resolvedExecutable": "C:\\Users\\default.LAPTOP-J5GV1TT8\\AppData\\Local\\Author Software\\nvm\\.nodejs\\npm.EXE",
+        "args": [
+          "start",
+          "--",
+          "--host",
+          "127.0.0.1",
+          "--port",
+          "4200"
+        ],
+        "cwd": "C:\\Users\\default.LAPTOP-J5GV1TT8\\OneDrive\\Documenti\\a_csc training\\codyza\\Codyza-Weather-Project\\codyza-weather-angular\\app",
+        "env": {},
+        "prependPath": [],
+        "platform": "win32"
+      },
+      {
+        "source": "tests-pass",
+        "resolvedExecutable": "C:\\Users\\default.LAPTOP-J5GV1TT8\\AppData\\Local\\Author Software\\nvm\\.nodejs\\npm.EXE",
+        "args": [
+          "test",
+          "--",
+          "--watch=false",
+          "--browsers=ChromeHeadless"
+        ],
+        "cwd": "C:\\Users\\default.LAPTOP-J5GV1TT8\\OneDrive\\Documenti\\a_csc training\\codyza\\Codyza-Weather-Project\\codyza-weather-angular\\app",
+        "env": {},
+        "prependPath": [],
+        "platform": "win32"
+      }
+    ]
+  }
+}

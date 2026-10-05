@@ -1,0 +1,18 @@
+# Workspace-level ignores for the repository root.
+# App-specific build, dependency, and env-local ignores remain in app/.gitignore.
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editors and IDEs
+.idea/
+.vscode/
+
+# Logs and temp files
+*.log
+*.tmp
+*.temp
+
+# Local environment overrides
+app/.env
