@@ -1,4 +1,4 @@
-import { Controller, Post, UseGuards } from '@nestjs/common';
+import { Controller, Post, Sse, UseGuards } from '@nestjs/common';
 
 import { AdminService } from './admin.service.js';
 import { Roles } from './roles.decorator.js';
@@ -13,5 +13,10 @@ export class AdminController {
   @Post('dashboard')
   async getDashboard() {
     return this.adminService.getDashboard();
+  }
+
+  @Sse('dashboard/stream')
+  streamDashboard() {
+    return this.adminService.streamDashboard();
   }
 }

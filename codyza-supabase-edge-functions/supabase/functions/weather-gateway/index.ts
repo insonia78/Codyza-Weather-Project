@@ -386,6 +386,10 @@ function isAdminDashboardPath(proxyPath: string) {
   return proxyPath === "/admin/dashboard";
 }
 
+function isAdminDashboardStreamPath(proxyPath: string) {
+  return proxyPath === "/admin/dashboard/stream";
+}
+
 function isPublicWeatherMapLayerPath(proxyPath: string) {
   return /^\/weather\/map-layers\/(clouds_new|precipitation_new|temp_new|wind_new)\/\d+\/\d+\/\d+\/?$/.test(proxyPath);
 }
@@ -810,6 +814,22 @@ async function parseBackendBody(response: Response) {
   return await response.text();
 }
 
+function shouldProxyRawResponseBody(contentType: string) {
+  return contentType.includes("text/event-stream") ||
+    contentType.startsWith("image/") ||
+    contentType.includes("application/octet-stream");
+}
+
+function summarizeProxiedBody(contentType: string, rawResponseBody: boolean, body: unknown) {
+  if (rawResponseBody) {
+    return {
+      responseShape: contentType.includes("text/event-stream") ? "stream" : "binary",
+    };
+  }
+
+  return summarizeBodyPayload(body);
+}
+
 function buildResponseHeaders(sourceHeaders: Headers, req?: Request) {
   const responseHeaders = new Headers(sourceHeaders);
   Object.entries(buildCorsHeaders(req)).forEach(([key, value]) => {
@@ -834,6 +854,13 @@ function buildProxiedResponse(
   }
 
   if (typeof body === "string") {
+    return new Response(body, {
+      status,
+      headers,
+    });
+  }
+
+  if (body instanceof ReadableStream || body instanceof Uint8Array || body instanceof ArrayBuffer || body instanceof Blob) {
     return new Response(body, {
       status,
       headers,
@@ -976,7 +1003,7 @@ export default {
 
       if (
         (service === SERVICES.WEATHER && !isPublicWeatherMapLayerPath(proxyPath)) ||
-        (service === SERVICES.ADMIN && isAdminDashboardPath(proxyPath))
+        (service === SERVICES.ADMIN && (isAdminDashboardPath(proxyPath) || isAdminDashboardStreamPath(proxyPath)))
       ) {
         logGatewayEvent("info", "weather.validation.started", {
           requestId,
@@ -1039,8 +1066,13 @@ export default {
       }
 
       const responseHeaders = buildResponseHeaders(backendResponse.headers, req);
+      const responseContentType = backendResponse.headers.get("content-type") ?? "";
+      const proxyRawResponseBody = canResponseHaveBody(req.method, backendResponse.status) &&
+        shouldProxyRawResponseBody(responseContentType);
       const responseBody = canResponseHaveBody(req.method, backendResponse.status)
-        ? await parseBackendBody(backendResponse)
+        ? proxyRawResponseBody
+          ? backendResponse.body
+          : await parseBackendBody(backendResponse)
         : null;
 
       if (service === SERVICES.AUTH) {
@@ -1049,7 +1081,7 @@ export default {
           proxyPath,
           status: backendResponse.status,
           ok: backendResponse.ok,
-          ...summarizeBodyPayload(responseBody),
+          ...summarizeProxiedBody(responseContentType, proxyRawResponseBody, responseBody),
           responseBody,
         });
       }
@@ -1060,9 +1092,9 @@ export default {
         service,
         status: backendResponse.status,
         ok: backendResponse.ok,
-        contentType: backendResponse.headers.get("content-type"),
+        contentType: responseContentType,
         responseContentLength: backendResponse.headers.get("content-length"),
-        ...summarizeBodyPayload(responseBody),
+        ...summarizeProxiedBody(responseContentType, proxyRawResponseBody, responseBody),
         durationMs: Date.now() - startedAt,
       });
 

@@ -80,6 +80,12 @@ export const supportedRoutes = [
     ]
   },
   {
+    pattern: /^\/admin\/dashboard\/stream\/?$/,
+    methods: [
+      "GET"
+    ]
+  },
+  {
     pattern: /^\/admin\/access\/?$/,
     methods: [
       "POST"

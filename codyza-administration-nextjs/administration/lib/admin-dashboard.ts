@@ -52,10 +52,42 @@ export type AdminDashboard = {
   };
 };
 
+export type AdminDashboardStreamPayload = {
+  dashboard: AdminDashboard;
+  generatedAt: string;
+};
+
+export function getAdminGatewayConfig() {
+  return {
+    gatewayBaseUrl: process.env.ADMIN_GATEWAY_BASE_URL?.trim() || "http://localhost:54321/functions/v1/weather-gateway",
+    gatewayApiKey: process.env.ADMIN_GATEWAY_API_KEY?.trim() || "",
+  };
+}
+
+export function getAdminDashboardUrl(gatewayBaseUrl: string): string {
+  return `${gatewayBaseUrl.replace(/\/+$/, "")}/admin/dashboard`;
+}
+
+export function getAdminDashboardStreamUrl(gatewayBaseUrl: string): string {
+  return `${gatewayBaseUrl.replace(/\/+$/, "")}/admin/dashboard/stream`;
+}
+
+export function buildAdminGatewayHeaders(token: string, gatewayApiKey: string, accept?: string) {
+  const headers = new Headers({
+    apikey: gatewayApiKey,
+  });
+  headers.set("Authorization", "Bearer ".concat(token));
+
+  if (accept) {
+    headers.set("Accept", accept);
+  }
+
+  return headers;
+}
+
 export async function getAdminDashboard(token: string): Promise<{ data: AdminDashboard | null; error: string | null }> {
-  const gatewayBaseUrl = process.env.ADMIN_GATEWAY_BASE_URL?.trim() || "http://localhost:54321/functions/v1/weather-gateway";
-  const gatewayApiKey = process.env.ADMIN_GATEWAY_API_KEY?.trim() || "";
-  const dashboardUrl = `${gatewayBaseUrl.replace(/\/+$/, "")}/admin/dashboard`;
+  const { gatewayBaseUrl, gatewayApiKey } = getAdminGatewayConfig();
+  const dashboardUrl = getAdminDashboardUrl(gatewayBaseUrl);
 
   if (!token) {
     return {
@@ -72,14 +104,9 @@ export async function getAdminDashboard(token: string): Promise<{ data: AdminDas
   }
 
   try {
-    const headers = new Headers({
-      Authorization: `Bearer ${token}`,
-      apikey: gatewayApiKey,
-    });
-
     const response = await fetchGatewayWithRetry(dashboardUrl, {
       cache: "no-store",
-      headers,
+      headers: buildAdminGatewayHeaders(token, gatewayApiKey),
       method: "POST",
     });
     if (!response.ok) {

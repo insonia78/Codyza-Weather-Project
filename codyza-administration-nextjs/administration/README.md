@@ -24,13 +24,12 @@ The admin UI is served from:
 
 These major admin surfaces now include Codyza branding with a reusable logo treatment, a short About Codyza section, Visit Codyza actions, and a Powered by Codyza footer.
 
-The App Router admin API route is served from:
+The App Router admin API routes are served from:
 
 - [app/api/admin/dashboard/route.ts](./app/api/admin/dashboard/route.ts)
+- [app/api/admin/dashboard/stream/route.ts](./app/api/admin/dashboard/stream/route.ts)
 
-The route handler proxies server-side requests through the Supabase `weather-gateway` function before the request reaches the Nest admin endpoint.
-Gateway-facing server routes automatically retry short-lived network failures and `502`/`503`/`504` responses before surfacing an error to the user.
-The deployed `weather-gateway` must forward the admin dashboard route to the Nest `/api/admin/dashboard` endpoint. The gateway now normalizes admin requests correctly even when its weather backend base URL ends with `/api/weather`.
+The route handlers proxy server-side requests through the Supabase `weather-gateway` function before the request reaches the Nest admin endpoints. Gateway-facing server routes automatically retry short-lived network failures and `502`/`503`/`504` responses before surfacing an error to the user. The deployed `weather-gateway` must forward the admin dashboard routes to the Nest `/api/admin/dashboard` and `/api/admin/dashboard/stream` endpoints. The gateway now normalizes admin requests correctly even when its weather backend base URL ends with `/api/weather`.
 
 Authentication for the admin UI is handled by:
 
@@ -49,12 +48,17 @@ The admin login flow is email-first:
 4. if a password exists, the app prompts for it on `/login`
 5. successful login or first-time password creation returns a JWT from the shared token service, stores it in an HttpOnly session cookie, and uses that token for protected admin requests through the gateway
 
-Both the App Router page (`/`) and the App Route (`/api/admin/dashboard`) are protected by [proxy.ts](./proxy.ts), which requires a valid admin JWT session cookie and redirects unauthenticated browser requests to `/login`.
+Both the App Router page (`/`) and the App Routes (`/api/admin/dashboard`, `/api/admin/dashboard/stream`) are protected by [proxy.ts](./proxy.ts), which requires a valid admin JWT session cookie and redirects unauthenticated browser requests to `/login`.
 
-The App Route fetches dashboard data through the Supabase `weather-gateway` function with a `POST /admin/dashboard` request and:
+The App Routes fetch dashboard data through the Supabase `weather-gateway` function with:
+
+- `POST /admin/dashboard` for one-shot server snapshots
+- `GET /admin/dashboard/stream` for real-time server-sent events
+
+The gateway requests include:
 
 ```http
-Authorization: Bearer <token>
+Authorization: Bearer <admin-jwt>
 apikey: <ADMIN_GATEWAY_API_KEY>
 ```
 
@@ -79,6 +83,7 @@ You can start from [`.env.local.example`](./.env.local.example) and copy it to `
 - active user count
 - cache performance metrics
 - runtime and database health overview
+- real-time dashboard streaming through the gateway
 
 ## Learn More
 

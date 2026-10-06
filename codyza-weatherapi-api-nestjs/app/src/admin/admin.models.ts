@@ -22,3 +22,44 @@ export interface TopSearchRow {
   searchCount: number;
   lastSearchedAt: Date | string;
 }
+
+export interface AdminDashboardSnapshot {
+  totals: {
+    requestsLast24Hours: number;
+    failedRequestsLast24Hours: number;
+    averageDurationMs: number;
+    lastRequestAt: Date | string | null;
+  };
+  activeUsers: {
+    last24Hours: number;
+  };
+  cachePerformance: {
+    hits: number;
+    misses: number;
+    bypasses: number;
+    writes: number;
+    hitRate: number;
+  };
+  apiUsage: Array<{
+    requestPath: string;
+    requestCount: number;
+    averageDurationMs: number;
+    failureCount: number;
+  }>;
+  failedRequests: AdminRequestLogRow[];
+  mostSearchedLocations: TopSearchRow[];
+  systemHealth: {
+    status: string;
+    uptimeSeconds: number;
+    memoryUsage: {
+      rss: number;
+      heapTotal: number;
+      heapUsed: number;
+      external: number;
+      arrayBuffers: number;
+    };
+    googleWeatherApiConfigured: boolean;
+    observabilityDatabaseConfigured: boolean;
+    databaseReachable: boolean;
+  };
+}

@@ -1,13 +1,21 @@
 import {
   Injectable,
   InternalServerErrorException,
+  type MessageEvent,
   OnModuleDestroy,
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { Pool, type QueryResult, type QueryResultRow } from 'pg';
+import { defer, from, interval, of, type Observable } from 'rxjs';
+import { catchError, concatMap, map, startWith } from 'rxjs/operators';
 
 import { CacheMetricsService } from './cache-metrics.service.js';
-import type { AdminRequestLogRow, ApiUsageSummaryRow, TopSearchRow } from './admin.models.js';
+import type {
+  AdminDashboardSnapshot,
+  AdminRequestLogRow,
+  ApiUsageSummaryRow,
+  TopSearchRow
+} from './admin.models.js';
 
 const observabilityDatabaseUrlEnvVar = 'WEATHER_OBSERVABILITY_DATABASE_URL';
 const searchHistoryDatabaseUrlEnvVar = 'WEATHER_SEARCH_HISTORY_DATABASE_URL';
@@ -68,6 +76,34 @@ export class AdminService implements OnModuleDestroy {
   }
 
   async getDashboard() {
+    return this.getDashboardSnapshot();
+  }
+
+  streamDashboard(): Observable<MessageEvent> {
+    return interval(this.dashboardStreamIntervalMs).pipe(
+      startWith(0),
+      concatMap(() =>
+        defer(() => from(this.getDashboardSnapshot())).pipe(
+          map((dashboard): MessageEvent => ({
+            type: 'dashboard',
+            data: {
+              dashboard,
+              generatedAt: new Date().toISOString(),
+            },
+          })),
+          catchError((error: unknown) => of<MessageEvent>({
+            type: 'dashboard-error',
+            data: {
+              message: error instanceof Error ? error.message : String(error),
+              generatedAt: new Date().toISOString(),
+            },
+          })),
+        ),
+      ),
+    );
+  }
+
+  async getDashboardSnapshot(): Promise<AdminDashboardSnapshot> {
     await this.ensureSchema();
 
     const [
@@ -286,5 +322,15 @@ export class AdminService implements OnModuleDestroy {
     } catch {
       return true;
     }
+  }
+
+  private get dashboardStreamIntervalMs(): number {
+    return this.readPositiveInteger('ADMIN_DASHBOARD_STREAM_INTERVAL_MS', 5000);
+  }
+
+  private readPositiveInteger(name: string, fallback: number): number {
+    const rawValue = (process.env[name] || '').trim();
+    const parsedValue = Number.parseInt(rawValue, 10);
+    return Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : fallback;
   }
 }

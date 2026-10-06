@@ -128,7 +128,12 @@ CREATE INDEX idx_weather_search_history_user_email_searched_at
 
 ## Admin observability dashboard
 
-The API now includes a dedicated admin observability surface at `POST /admin/dashboard`. It aggregates:
+The API now includes dedicated admin observability surfaces at:
+
+- `POST /admin/dashboard` for one-shot snapshots
+- `GET /admin/dashboard/stream` for real-time server-sent events
+
+They aggregate:
 
 - API usage in the last 24 hours
 - failed requests
@@ -145,6 +150,8 @@ This endpoint now requires:
 - trusted gateway headers that match `WEATHER_GATEWAY_INTERNAL_SECRET`
 
 Set `WEATHER_GATEWAY_INTERNAL_SECRET` in the Nest environment to the same shared secret used by the Supabase `weather-gateway` function so the role guard can reject spoofed direct requests.
+
+Set `ADMIN_DASHBOARD_STREAM_INTERVAL_MS` if you want to override the default 5-second real-time refresh interval for the SSE stream.
 
 ## Deployment
 

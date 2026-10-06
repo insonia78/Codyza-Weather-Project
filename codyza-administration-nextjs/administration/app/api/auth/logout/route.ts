@@ -12,9 +12,8 @@ export async function POST() {
   let logoutWarning: string | null = null;
 
   if (session) {
-    const headers = new Headers({
-      Authorization: `Bearer ${session.token}`,
-    });
+    const headers = new Headers();
+    headers.set("Authorization", "Bearer ".concat(session.token));
     if (gatewayApiKey) {
       headers.set("apikey", gatewayApiKey);
     }
