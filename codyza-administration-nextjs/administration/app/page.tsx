@@ -61,7 +61,7 @@ export default async function Home() {
           <h2>Admin API unavailable</h2>
           <p>{error}</p>
           <p className="admin-subtext">
-            Set <code>ADMIN_GATEWAY_BASE_URL</code> and <code>ADMIN_GATEWAY_API_KEY</code> in the admin app environment so the dashboard can fetch data through the weather gateway.
+            Set <code>ADMIN_GATEWAY_BASE_URL</code> and <code>ADMIN_GATEWAY_API_KEY</code> in the admin app environment, then make sure the deployed weather-gateway includes the <code>/admin/dashboard</code> route.
           </p>
         </section>
       ) : null}

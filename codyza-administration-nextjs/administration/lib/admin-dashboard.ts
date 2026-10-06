@@ -80,6 +80,13 @@ export async function getAdminDashboard(token: string): Promise<{ data: AdminDas
       headers,
     });
     if (!response.ok) {
+      if (response.status === 404) {
+        return {
+          data: null,
+          error: `Admin API request failed (404 Not Found). Verify ADMIN_GATEWAY_BASE_URL points to the weather-gateway function and redeploy the gateway so the /admin/dashboard route exists at ${dashboardUrl}.`,
+        };
+      }
+
       return {
         data: null,
         error: `Admin API request failed (${response.status} ${response.statusText}).`,
