@@ -1,6 +1,10 @@
 {
   "rewrites": [
     {
+      "source": "/api/:match*",
+      "destination": "https://ywdslwhykwgegkdnhvvi.supabase.co/functions/v1/weather-gateway/:match*"
+    },
+    {
       "source": "/codyza-weather-angular-assets/:match*",
       "destination": "/:match*"
     }
