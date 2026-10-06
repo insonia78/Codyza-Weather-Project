@@ -1,13 +1,13 @@
-import { assertEquals, assertFalse, assertTrue } from "jsr:@std/assert";
+import { assert, assertEquals, assertFalse } from "jsr:@std/assert";
 
 import { isVerifiedToken, jsonResponse } from "./utils.ts";
 
 Deno.test("isVerifiedToken validates supported token shapes", () => {
-  assertTrue(isVerifiedToken({
+  assert(isVerifiedToken({
     payload: { sub: "user@example.com" },
     tokenType: "custom",
   }));
-  assertTrue(isVerifiedToken({
+  assert(isVerifiedToken({
     payload: { sub: "user@example.com" },
     tokenType: "supabase",
   }));
@@ -19,6 +19,12 @@ Deno.test("isVerifiedToken validates supported token shapes", () => {
     payload: { sub: "user@example.com" },
     tokenType: "invalid",
   }));
+});
+
+Deno.test("isVerifiedToken rejects non-object inputs and missing payloads", () => {
+  for (const value of [null, undefined, "token", 42, true, {}, { tokenType: "custom" }]) {
+    assertFalse(isVerifiedToken(value));
+  }
 });
 
 Deno.test("jsonResponse returns a JSON body with permissive CORS headers", async () => {

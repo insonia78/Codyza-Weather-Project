@@ -3,7 +3,7 @@ export type VerifiedToken = {
   tokenType: "supabase" | "custom";
 };
 
-export function jsonResponse(status, body) {
+export function jsonResponse(status: number, body: unknown) {
   return new Response(JSON.stringify(body), {
     status,
     headers: {
@@ -14,11 +14,11 @@ export function jsonResponse(status, body) {
     }
   });
 }
-export function isRecord(value) {
+export function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
 }
 
-export function isVerifiedToken(value): value is VerifiedToken {
+export function isVerifiedToken(value: unknown): value is VerifiedToken {
   if (!isRecord(value)) {
     return false;
   }
