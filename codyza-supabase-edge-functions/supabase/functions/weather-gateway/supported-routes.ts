@@ -30,6 +30,18 @@ export const supportedRoutes = [
     ]
   },
   {
+    pattern: /^\/accounts\/reset-password\/?$/,
+    methods: [
+      "POST"
+    ]
+  },
+  {
+    pattern: /^\/accounts\/reset-password\/confirm\/?$/,
+    methods: [
+      "POST"
+    ]
+  },
+  {
     pattern: /^\/accounts\/\d+\/?$/,
     methods: [
       "PUT",

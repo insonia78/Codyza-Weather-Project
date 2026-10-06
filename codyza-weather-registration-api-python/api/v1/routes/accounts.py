@@ -7,12 +7,18 @@ from controller.accounts_controller.accounts_controller import (
     get_account,
     get_account_access,
     patch_account,
+    request_password_reset,
+    reset_account_password,
     update_account,
 )
 from controller.accounts_controller.models.models import (
     AccountBase,
     AccountEmailLookup,
     AccountLoginPublic,
+    AccountPasswordResetCompletedPublic,
+    AccountPasswordResetConfirm,
+    AccountPasswordResetRequest,
+    AccountPasswordResetRequestedPublic,
     AccountPasswordSetup,
     AccountPublic,
     AccountUpdate,
@@ -36,6 +42,22 @@ def do_get(body: AccountBase, session: SessionDep) -> AccountLoginPublic:
 @accounts_router.post("/password/setup", status_code=status.HTTP_200_OK, response_model=AccountLoginPublic)
 def do_create_password(body: AccountPasswordSetup, session: SessionDep) -> AccountLoginPublic:
     return create_account_password(body, session)
+
+
+@accounts_router.post("/reset-password", status_code=status.HTTP_200_OK, response_model=AccountPasswordResetRequestedPublic)
+def do_request_password_reset(
+    body: AccountPasswordResetRequest,
+    session: SessionDep,
+) -> AccountPasswordResetRequestedPublic:
+    return request_password_reset(body, session)
+
+
+@accounts_router.post("/reset-password/confirm", status_code=status.HTTP_200_OK, response_model=AccountPasswordResetCompletedPublic)
+def do_confirm_password_reset(
+    body: AccountPasswordResetConfirm,
+    session: SessionDep,
+) -> AccountPasswordResetCompletedPublic:
+    return reset_account_password(body, session)
 
 
 @accounts_router.post("/", status_code=status.HTTP_201_CREATED)

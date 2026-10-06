@@ -74,6 +74,30 @@ def create_db_and_tables():
                 """
             )
         )
+        connection.execute(
+            text(
+                """
+                CREATE UNIQUE INDEX IF NOT EXISTS idx_password_reset_tokens_token_hash
+                ON password_reset_tokens (token_hash)
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_account_id_created_at
+                ON password_reset_tokens (account_id, created_at DESC)
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                CREATE INDEX IF NOT EXISTS idx_password_reset_tokens_expires_at
+                ON password_reset_tokens (expires_at)
+                """
+            )
+        )
 
 def get_session():
     with Session(engine) as session:

@@ -50,6 +50,14 @@ The following variables are available:
 
 The public account pages include Codyza branding with a reusable logo, a short About Codyza section, a Visit Codyza action, and Powered by Codyza messaging on major screens.
 
+The reset-password page now supports the full user flow:
+
+- requesting a reset link by email
+- handling admin-email redirects to the administration create-password flow
+- confirming a new password from a reset link with `?token=...`
+
+For production email delivery, the registration API must expose `/accounts/reset-password` and `/accounts/reset-password/confirm`, and its environment must set `PASSWORD_RESET_URL_BASE` to this app's public `/reset-password` URL.
+
 Create React App loads these automatically:
 
 - `npm start` uses `.env.development`

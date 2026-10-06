@@ -201,6 +201,59 @@ Example response body:
 }
 ```
 
+#### `POST /accounts/reset-password`
+
+Starts the password reset flow for a user account and sends a reset link when delivery is configured.
+
+Example request body:
+
+```json
+{
+  "email": "user@example.com"
+}
+```
+
+Example response body:
+
+```json
+{
+  "accepted": true,
+  "message": "If an account exists for that email, a password reset link has been sent.",
+  "preview_url": null
+}
+```
+
+Set `PASSWORD_RESET_URL_BASE` to the public React reset-password page URL, for example:
+
+- `https://your-react-app.example.com/reset-password`
+
+For delivery, configure either:
+
+- SMTP via `PASSWORD_RESET_SMTP_HOST`, `PASSWORD_RESET_SMTP_PORT`, `PASSWORD_RESET_SMTP_USERNAME`, `PASSWORD_RESET_SMTP_PASSWORD`, `PASSWORD_RESET_SMTP_FROM_EMAIL`, and optional `PASSWORD_RESET_SMTP_FROM_NAME`
+- or `PASSWORD_RESET_DEBUG_LINKS_ENABLED=true` for non-production testing, which returns a `preview_url`
+
+#### `POST /accounts/reset-password/confirm`
+
+Completes the password reset with a valid token and a new password.
+
+Example request body:
+
+```json
+{
+  "token": "token-from-reset-link",
+  "password": "newpassword123"
+}
+```
+
+Example response body:
+
+```json
+{
+  "reset": true,
+  "message": "Password reset completed successfully."
+}
+```
+
 #### `POST /accounts/`
 
 Creates an account.

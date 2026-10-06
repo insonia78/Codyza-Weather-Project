@@ -24,6 +24,7 @@ api/
 
 - Health endpoint
 - Account CRUD endpoints
+- Password reset request + confirmation endpoints
 - Weather-gateway caller authentication for account routes
 - Automatic database and table creation on startup
 - SQLModel-based database models
@@ -81,6 +82,8 @@ When `WEATHER_GATEWAY_INTERNAL_SECRET` is configured, the account routes only ac
 ### Accounts
 
 - `POST /accounts/login`
+- `POST /accounts/reset-password`
+- `POST /accounts/reset-password/confirm`
 - `POST /accounts/`
 - `PUT /accounts/{id}`
 - `PATCH /accounts/{id}`
