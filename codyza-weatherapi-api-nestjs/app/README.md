@@ -106,7 +106,7 @@ CREATE INDEX idx_weather_search_history_user_email_searched_at
 
 ## Admin observability dashboard
 
-The API now includes a dedicated admin observability surface at `GET /admin/dashboard`. It aggregates:
+The API now includes a dedicated admin observability surface at `POST /admin/dashboard`. It aggregates:
 
 - API usage in the last 24 hours
 - failed requests

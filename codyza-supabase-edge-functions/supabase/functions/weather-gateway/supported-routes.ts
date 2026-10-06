@@ -70,7 +70,7 @@ export const supportedRoutes = [
   {
     pattern: /^\/admin\/dashboard\/?$/,
     methods: [
-      "GET"
+      "POST"
     ]
   },
   {

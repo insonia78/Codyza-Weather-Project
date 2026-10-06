@@ -1,4 +1,4 @@
-import { Controller, Get, UseGuards } from '@nestjs/common';
+import { Controller, Post, UseGuards } from '@nestjs/common';
 
 import { AdminService } from './admin.service.js';
 import { Roles } from './roles.decorator.js';
@@ -10,7 +10,7 @@ import { RolesGuard } from './roles.guard.js';
 export class AdminController {
   constructor(private readonly adminService: AdminService) {}
 
-  @Get('dashboard')
+  @Post('dashboard')
   async getDashboard() {
     return this.adminService.getDashboard();
   }

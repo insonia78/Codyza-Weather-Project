@@ -296,7 +296,7 @@ function buildTargetUrl(baseUrl: string, proxyPath: string, search: string, serv
     return targetUrl;
   }
 
-  const normalizedBaseUrl = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
+  const normalizedBaseUrl = normalizeBackendBaseUrl(baseUrl, service);
   const parsedBaseUrl = new URL(normalizedBaseUrl);
   const baseSegments = parsedBaseUrl.pathname.split("/").filter(Boolean);
   const proxySegments = proxyPath.split("/").filter(Boolean);
@@ -310,6 +310,23 @@ function buildTargetUrl(baseUrl: string, proxyPath: string, search: string, serv
   const targetUrl = new URL(normalizedProxyPath, normalizedBaseUrl);
   targetUrl.search = search;
   return targetUrl;
+}
+
+function normalizeBackendBaseUrl(baseUrl: string, service: SERVICES | null) {
+  const normalizedBaseUrl = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
+  if (service !== SERVICES.ADMIN) {
+    return normalizedBaseUrl;
+  }
+
+  const parsedBaseUrl = new URL(normalizedBaseUrl);
+  const baseSegments = parsedBaseUrl.pathname.split("/").filter(Boolean);
+  if (baseSegments[baseSegments.length - 1] !== SERVICES.WEATHER) {
+    return normalizedBaseUrl;
+  }
+
+  baseSegments.pop();
+  parsedBaseUrl.pathname = baseSegments.length > 0 ? `/${baseSegments.join("/")}/` : "/";
+  return parsedBaseUrl.toString();
 }
 
 function buildContainerReachableBackendUrl(baseUrl: string) {

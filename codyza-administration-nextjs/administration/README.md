@@ -28,6 +28,7 @@ The App Router admin API route is served from:
 
 The route handler proxies server-side requests through the Supabase `weather-gateway` function before the request reaches the Nest admin endpoint.
 Gateway-facing server routes automatically retry short-lived network failures and `502`/`503`/`504` responses before surfacing an error to the user.
+The deployed `weather-gateway` must forward the admin dashboard route to the Nest `/api/admin/dashboard` endpoint. The gateway now normalizes admin requests correctly even when its weather backend base URL ends with `/api/weather`.
 
 Authentication for the admin UI is handled by:
 
@@ -48,7 +49,7 @@ The admin login flow is email-first:
 
 Both the App Router page (`/`) and the App Route (`/api/admin/dashboard`) are protected by [proxy.ts](./proxy.ts), which requires a valid admin JWT session cookie and redirects unauthenticated browser requests to `/login`.
 
-The App Route fetches dashboard data through the Supabase `weather-gateway` function with:
+The App Route fetches dashboard data through the Supabase `weather-gateway` function with a `POST /admin/dashboard` request and:
 
 ```http
 Authorization: Bearer <token>

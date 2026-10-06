@@ -5,7 +5,7 @@ import { getAdminSessionFromCookies, isAdminSessionAuthorized } from "../../../.
 
 export const dynamic = "force-dynamic";
 
-export async function GET() {
+async function handleDashboardRequest() {
   const session = await getAdminSessionFromCookies();
   if (!session || !isAdminSessionAuthorized(session)) {
     return NextResponse.json(
@@ -24,4 +24,12 @@ export async function GET() {
   }
 
   return NextResponse.json(result.data, { status: 200 });
+}
+
+export async function GET() {
+  return handleDashboardRequest();
+}
+
+export async function POST() {
+  return handleDashboardRequest();
 }

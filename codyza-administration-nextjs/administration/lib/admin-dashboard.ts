@@ -80,6 +80,7 @@ export async function getAdminDashboard(token: string): Promise<{ data: AdminDas
     const response = await fetchGatewayWithRetry(dashboardUrl, {
       cache: "no-store",
       headers,
+      method: "POST",
     });
     if (!response.ok) {
       if (response.status === 404) {
