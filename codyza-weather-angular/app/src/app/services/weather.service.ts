@@ -114,6 +114,12 @@ export class WeatherService {
     );
   }
 
+  deactivateAccount(): Observable<{ deleted: boolean; email: string }> {
+    return this.http.post<{ deleted: boolean; email: string }>(`${this.gatewayBaseUrl}/accounts/deactivate`, {}).pipe(
+      catchError((error: HttpErrorResponse) => this.handleBackendError('Account deactivation', error))
+    );
+  }
+
   private handleBackendError(surfaceName: string, error: HttpErrorResponse): Observable<never> {
     const backendMessage = typeof error.error?.message === 'string'
       ? error.error.message

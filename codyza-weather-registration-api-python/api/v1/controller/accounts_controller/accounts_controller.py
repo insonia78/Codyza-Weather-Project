@@ -4,12 +4,14 @@ from hashlib import sha256
 from secrets import token_urlsafe
 
 from fastapi import HTTPException, status
-from sqlalchemy import func
+from sqlalchemy import delete, func
 from sqlmodel import select
 
 from controller.accounts_controller.models.models import (
     Account,
     AccountBase,
+    AccountDeactivatedPublic,
+    AccountDeactivationRequest,
     AccountEmailLookup,
     AccountLoginPublic,
     AccountPasswordResetCompletedPublic,
@@ -353,4 +355,28 @@ def delete_account(id: int, session: SessionDep) -> AccountPublic:
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="Failed to delete account",
+        ) from exc
+
+
+def deactivate_account(
+    body: AccountDeactivationRequest,
+    session: SessionDep,
+) -> AccountDeactivatedPublic:
+    try:
+        account = find_account_by_email(body.email, session)
+        if not account:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Account not found")
+
+        session.exec(
+            delete(PasswordResetToken).where(PasswordResetToken.account_id == account.id)
+        )
+        session.delete(account)
+        session.commit()
+        return AccountDeactivatedPublic(email=account.email)
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to deactivate account",
         ) from exc

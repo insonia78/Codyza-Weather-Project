@@ -4,6 +4,7 @@ from unittest.mock import Mock, patch
 from fastapi.testclient import TestClient
 
 from controller.accounts_controller.models.models import (
+    AccountDeactivatedPublic,
     AccountLoginPublic,
     AccountPasswordResetCompletedPublic,
     AccountPasswordResetRequestedPublic,
@@ -89,6 +90,22 @@ class AccountsRoutesE2ETests(unittest.TestCase):
             "message": "Password reset complete.",
         })
         reset_account_password.assert_called_once()
+
+    @patch("routes.accounts.deactivate_account")
+    def test_account_deactivation_endpoint_returns_deleted_state(
+        self,
+        deactivate_account: Mock,
+    ) -> None:
+        deactivate_account.return_value = AccountDeactivatedPublic(email="weather.user@example.com")
+
+        response = self.client.post("/accounts/deactivate", json={"email": "weather.user@example.com"})
+
+        self.assertEqual(response.status_code, 200)
+        self.assertEqual(response.json(), {
+            "deleted": True,
+            "email": "weather.user@example.com",
+        })
+        deactivate_account.assert_called_once()
 
 
 if __name__ == "__main__":

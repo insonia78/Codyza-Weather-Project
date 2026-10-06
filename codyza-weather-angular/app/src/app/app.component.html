@@ -107,9 +107,16 @@
       <button
         type="button"
         class="secondary-button"
-        [disabled]="isLogoutInProgress"
+        [disabled]="isLogoutInProgress || isAccountDeletionInProgress"
         (click)="logout()">
         {{ isLogoutInProgress ? 'Logging out...' : 'Logout' }}
+      </button>
+      <button
+        type="button"
+        class="tertiary-button"
+        [disabled]="isLogoutInProgress || isAccountDeletionInProgress || !loggedInEmail"
+        (click)="deactivateAccount()">
+        {{ isAccountDeletionInProgress ? 'Deleting account...' : 'Deactivate account' }}
       </button>
     </div>
   </header>

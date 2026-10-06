@@ -3,6 +3,7 @@ from fastapi import APIRouter, status
 from controller.accounts_controller.accounts_controller import (
     create_account,
     create_account_password,
+    deactivate_account,
     delete_account,
     get_account,
     get_account_access,
@@ -13,6 +14,8 @@ from controller.accounts_controller.accounts_controller import (
 )
 from controller.accounts_controller.models.models import (
     AccountBase,
+    AccountDeactivatedPublic,
+    AccountDeactivationRequest,
     AccountEmailLookup,
     AccountLoginPublic,
     AccountPasswordResetCompletedPublic,
@@ -58,6 +61,14 @@ def do_confirm_password_reset(
     session: SessionDep,
 ) -> AccountPasswordResetCompletedPublic:
     return reset_account_password(body, session)
+
+
+@accounts_router.post("/deactivate", status_code=status.HTTP_200_OK, response_model=AccountDeactivatedPublic)
+def do_deactivate_account(
+    body: AccountDeactivationRequest,
+    session: SessionDep,
+) -> AccountDeactivatedPublic:
+    return deactivate_account(body, session)
 
 
 @accounts_router.post("/", status_code=status.HTTP_201_CREATED)
