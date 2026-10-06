@@ -94,6 +94,7 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly localTimestampState = computed(() => this.appState().localTimestamp);
   private readonly temperatureUnitState = computed(() => this.appState().temperatureUnit);
   private readonly measurementSystemState = computed(() => this.appState().measurementSystem);
+  private logoutInProgress = false;
 
   constructor(
     private readonly weatherService: WeatherService,
@@ -167,6 +168,10 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
 
   get selectedMapLayer(): MapLayerKey {
     return this.appState().selectedMapLayer;
+  }
+
+  get isLogoutInProgress(): boolean {
+    return this.logoutInProgress;
   }
 
   get autoRefresh(): boolean {
@@ -319,18 +324,41 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   logout(): void {
+    if (this.logoutInProgress) {
+      return;
+    }
+
     if (!localStorage.getItem('jwt_token')) {
       this.completeLogout();
       return;
     }
 
+    this.logoutInProgress = true;
+    this.weatherStore.setErrorMessage('');
+    this.weatherStore.setApiMessage('Logging out... Waiting for token revocation confirmation.');
+
     this.weatherService.logout().subscribe({
-      next: () => this.completeLogout(),
-      error: () => this.completeLogout(),
+      next: (response) => {
+        if (!response.revoked) {
+          this.logoutInProgress = false;
+          this.weatherStore.setApiMessage('');
+          this.weatherStore.setErrorMessage('Logout failed because token revocation was not confirmed.');
+          return;
+        }
+
+        this.completeLogout();
+      },
+      error: (error: Error) => {
+        this.logoutInProgress = false;
+        this.weatherStore.setApiMessage('');
+        this.weatherStore.setErrorMessage(`Logout failed: ${error.message}`);
+      },
     });
   }
 
   private completeLogout(): void {
+    this.logoutInProgress = false;
+    this.weatherStore.setApiMessage('');
     this.resetApp();
     localStorage.removeItem('jwt_token');
     this.redirectToRootApp();

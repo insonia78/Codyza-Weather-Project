@@ -39,8 +39,9 @@
       <button
         type="button"
         class="secondary-button"
+        [disabled]="isLogoutInProgress"
         (click)="logout()">
-        Logout
+        {{ isLogoutInProgress ? 'Logging out...' : 'Logout' }}
       </button>
     </div>
   </header>

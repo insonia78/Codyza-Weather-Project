@@ -34,6 +34,14 @@ function jsonResponse(status: number, body: unknown) {
   });
 }
 
+function logRevokeEvent(event: string, details: Record<string, unknown> = {}) {
+  console.log(`[jwt-revoke] ${JSON.stringify({
+    event,
+    functionName: "jwt-revoke",
+    ...details,
+  })}`);
+}
+
 function isRevokeTokenRequestBody(value: unknown): value is RevokeTokenRequestBody {
   if (typeof value !== "object" || value === null) {
     return false;
@@ -46,6 +54,7 @@ function isRevokeTokenRequestBody(value: unknown): value is RevokeTokenRequestBo
 async function getTokenIdFromAuthorizationHeader(req: Request): Promise<string | null> {
   const authorization = req.headers.get("authorization") ?? req.headers.get("Authorization");
   if (!authorization?.startsWith("Bearer ")) {
+    logRevokeEvent("authorization.missing-bearer");
     return null;
   }
 
@@ -56,6 +65,10 @@ async function getTokenIdFromAuthorizationHeader(req: Request): Promise<string |
   const token = authorization.slice("Bearer ".length);
   const verified = await jwtVerify(token, encoder.encode(customJwtSecret));
   const tokenId = verified.payload.jti;
+  logRevokeEvent("authorization.verified", {
+    hasTokenId: typeof tokenId === "string" && tokenId.trim().length > 0,
+    subject: typeof verified.payload.sub === "string" ? verified.payload.sub : null,
+  });
   return typeof tokenId === "string" && tokenId.trim() ? tokenId : null;
 }
 
@@ -76,10 +89,14 @@ export default {
 
     const gatewayAuthorizationError = authorizeWeatherGatewayRequest(req, jsonResponse, "jwt-revoke");
     if (gatewayAuthorizationError) {
+      logRevokeEvent("gateway.authorization.failed");
       return gatewayAuthorizationError;
     }
 
     if (!isJwtTokenDatabaseConfigured()) {
+      logRevokeEvent("database.configuration.missing", {
+        envVar: jwtTokenDatabaseUrlEnvVar,
+      });
       return jsonResponse(500, {
         error: `Missing ${jwtTokenDatabaseUrlEnvVar} environment variable`,
       });
@@ -95,6 +112,11 @@ export default {
 
       const explicitTokenId = typeof requestBody.tokenId === "string" ? requestBody.tokenId.trim() : "";
       const tokenId = explicitTokenId || await getTokenIdFromAuthorizationHeader(req);
+      logRevokeEvent("token.resolution.completed", {
+        usedExplicitTokenId: Boolean(explicitTokenId),
+        tokenId,
+      });
+
       if (!tokenId) {
         return jsonResponse(400, {
           error: "Provide tokenId in the request body or a valid Bearer token in the Authorization header.",
@@ -102,6 +124,12 @@ export default {
       }
 
       const revokedToken = await revokeJwtTokenRecord(tokenId);
+      logRevokeEvent("database.revoke.completed", {
+        tokenId,
+        revoked: Boolean(revokedToken),
+        revokedAt: revokedToken?.revokedAt ?? null,
+      });
+
       if (!revokedToken) {
         return jsonResponse(404, {
           error: "JWT token record was not found or has already been revoked.",
@@ -115,6 +143,9 @@ export default {
       });
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
+      logRevokeEvent("request.failed", {
+        error: message,
+      });
       return jsonResponse(400, {
         error: message,
       });

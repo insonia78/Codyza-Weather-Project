@@ -551,6 +551,15 @@ export default {
 
     try {
       let verifiedToken: VerifiedToken | null = null;
+      if (service === SERVICES.AUTH) {
+        logGatewayEvent("info", "auth.logout.requested", {
+          requestId,
+          proxyPath,
+          targetUrl: targetUrl.toString(),
+          ...getHeaderPresence(req),
+        });
+      }
+
       if (service === SERVICES.WEATHER) {
         logGatewayEvent("info", "weather.validation.started", {
           requestId,

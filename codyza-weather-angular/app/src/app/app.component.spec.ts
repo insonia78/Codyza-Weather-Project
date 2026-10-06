@@ -3,7 +3,7 @@ import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http'
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideEffects } from '@ngrx/effects';
 import { provideStore, provideState } from '@ngrx/store';
-import { of } from 'rxjs';
+import { of, Subject, throwError } from 'rxjs';
 
 import { AppComponent } from './app.component';
 import { WeatherService } from './services/weather.service';
@@ -101,5 +101,49 @@ describe('AppComponent', () => {
     expect(localStorage.getItem(WEATHER_STORAGE_KEYS.favorites)).toBeNull();
     expect(localStorage.getItem('jwt_token')).toBeNull();
     expect(redirectSpy).toHaveBeenCalled();
+  });
+
+  it('should keep the user on the page when logout revocation fails', () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    const app = fixture.componentInstance;
+    const redirectSpy = spyOn<any>(app, 'redirectToRootApp').and.stub();
+    const weatherService = TestBed.inject(WeatherService);
+    spyOn(weatherService, 'logout').and.returnValue(throwError(() => new Error('Token revocation failed.')));
+
+    localStorage.setItem('jwt_token', 'token');
+
+    fixture.detectChanges();
+
+    const buttons = Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[];
+    const logoutButton = buttons.find((button) => button.textContent?.trim() === 'Logout');
+
+    logoutButton?.click();
+    fixture.detectChanges();
+
+    expect(localStorage.getItem('jwt_token')).toBe('token');
+    expect(app.errorMessage).toContain('Logout failed: Token revocation failed.');
+    expect(redirectSpy).not.toHaveBeenCalled();
+  });
+
+  it('should show a logging out message while token revocation is pending', () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    const app = fixture.componentInstance;
+    const logoutSubject = new Subject<{ revoked: boolean }>();
+    const weatherService = TestBed.inject(WeatherService);
+    spyOn(weatherService, 'logout').and.returnValue(logoutSubject.asObservable());
+
+    localStorage.setItem('jwt_token', 'token');
+
+    fixture.detectChanges();
+
+    const buttons = Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[];
+    const logoutButton = buttons.find((button) => button.textContent?.trim() === 'Logout');
+
+    logoutButton?.click();
+    fixture.detectChanges();
+
+    expect(app.isLogoutInProgress).toBeTrue();
+    expect(app.apiMessage).toContain('Logging out... Waiting for token revocation confirmation.');
+    expect(fixture.nativeElement.textContent).toContain('Logging out... Waiting for token revocation confirmation.');
   });
 });
