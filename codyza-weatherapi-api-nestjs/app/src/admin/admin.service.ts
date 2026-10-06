@@ -292,6 +292,33 @@ export class AdminService implements OnModuleDestroy {
 
           CREATE INDEX IF NOT EXISTS idx_weather_api_request_logs_user_email
             ON weather_api_request_logs (user_email);
+
+          CREATE TABLE IF NOT EXISTS weather_search_history (
+            id BIGSERIAL PRIMARY KEY,
+            user_email VARCHAR(320) NOT NULL,
+            query_text VARCHAR(255),
+            location_id VARCHAR(255) NOT NULL,
+            location_name VARCHAR(255) NOT NULL,
+            state_region VARCHAR(255),
+            country VARCHAR(255) NOT NULL,
+            latitude DOUBLE PRECISION NOT NULL,
+            longitude DOUBLE PRECISION NOT NULL,
+            source VARCHAR(20) NOT NULL CHECK (source IN ('search', 'favorite', 'recent', 'geolocation', 'map')),
+            searched_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+            CONSTRAINT weather_search_history_user_location_unique UNIQUE (user_email, location_id)
+          );
+
+          CREATE INDEX IF NOT EXISTS idx_weather_search_history_location_id
+            ON weather_search_history (location_id);
+
+          CREATE INDEX IF NOT EXISTS idx_weather_search_history_query_text
+            ON weather_search_history (query_text);
+
+          CREATE INDEX IF NOT EXISTS idx_weather_search_history_searched_at
+            ON weather_search_history (searched_at DESC);
+
+          CREATE INDEX IF NOT EXISTS idx_weather_search_history_user_email_searched_at
+            ON weather_search_history (user_email, searched_at DESC);
         `,
       )
       .then(() => undefined)

@@ -110,6 +110,7 @@ export async function getAdminDashboard(token: string): Promise<{ data: AdminDas
       method: "POST",
     });
     if (!response.ok) {
+      const errorDetails = await readGatewayErrorDetails(response);
       if (response.status === 404) {
         return {
           data: null,
@@ -119,7 +120,9 @@ export async function getAdminDashboard(token: string): Promise<{ data: AdminDas
 
       return {
         data: null,
-        error: `Admin API request failed (${response.status} ${response.statusText}).`,
+        error: errorDetails
+          ? `Admin API request failed (${response.status} ${response.statusText}): ${errorDetails}`
+          : `Admin API request failed (${response.status} ${response.statusText}).`,
       };
     }
 
@@ -132,5 +135,29 @@ export async function getAdminDashboard(token: string): Promise<{ data: AdminDas
       data: null,
       error: error instanceof Error ? error.message : String(error),
     };
+  }
+}
+
+async function readGatewayErrorDetails(response: Response): Promise<string | null> {
+  const contentType = response.headers.get("content-type") || "";
+
+  try {
+    if (contentType.includes("application/json")) {
+      const payload = await response.json() as unknown;
+      if (payload && typeof payload === "object" && !Array.isArray(payload)) {
+        if ("error" in payload && typeof payload.error === "string") {
+          return payload.error.trim() || null;
+        }
+
+        if ("message" in payload && typeof payload.message === "string") {
+          return payload.message.trim() || null;
+        }
+      }
+    }
+
+    const rawText = (await response.text()).trim();
+    return rawText || null;
+  } catch {
+    return null;
   }
 }

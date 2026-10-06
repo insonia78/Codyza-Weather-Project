@@ -124,6 +124,8 @@ These endpoints expect the authenticated user identity in the `X-User-Id` header
 
 Set `WEATHER_SEARCH_HISTORY_DATABASE_URL` (or `DATABASE_URL`) so the search-history service can persist recent searches in PostgreSQL.
 
+The Nest API now bootstraps the `weather_search_history` table and its indexes automatically on first use, so new environments do not need a separate manual migration before recent-search or admin top-search features can work.
+
 ```sql
 CREATE TABLE weather_search_history (
   id BIGSERIAL PRIMARY KEY,

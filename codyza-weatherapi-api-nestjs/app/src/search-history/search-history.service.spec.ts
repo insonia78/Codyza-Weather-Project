@@ -13,19 +13,22 @@ describe('SearchHistoryService', () => {
 
   it('returns recent searches ordered for the user', async () => {
     const client = {
-      query: vi.fn().mockResolvedValue(
-        createQueryResult([
-          {
-            locationId: '45.464:9.190',
-            locationName: 'Milan',
-            stateRegion: null,
-            country: 'Italy',
-            latitude: 45.4642,
-            longitude: 9.19,
-            source: 'recent',
-          },
-        ]),
-      ),
+      query: vi
+        .fn()
+        .mockResolvedValueOnce(createQueryResult([]))
+        .mockResolvedValueOnce(
+          createQueryResult([
+            {
+              locationId: '45.464:9.190',
+              locationName: 'Milan',
+              stateRegion: null,
+              country: 'Italy',
+              latitude: 45.4642,
+              longitude: 9.19,
+              source: 'recent',
+            },
+          ]),
+        ),
     };
 
     const service = new SearchHistoryService({
@@ -45,7 +48,11 @@ describe('SearchHistoryService', () => {
       },
     ]);
 
-    expect(client.query).toHaveBeenCalledWith(expect.stringContaining('FROM weather_search_history'), [
+    expect(client.query).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining('CREATE TABLE IF NOT EXISTS weather_search_history'),
+    );
+    expect(client.query).toHaveBeenNthCalledWith(2, expect.stringContaining('FROM weather_search_history'), [
       'user@example.com',
       8,
     ]);
@@ -68,6 +75,7 @@ describe('SearchHistoryService', () => {
     const client = {
       query: vi
         .fn()
+        .mockResolvedValueOnce(createQueryResult([]))
         .mockResolvedValueOnce(createQueryResult([]))
         .mockResolvedValueOnce(createQueryResult([]))
         .mockResolvedValueOnce(
@@ -103,12 +111,12 @@ describe('SearchHistoryService', () => {
     ]);
 
     expect(client.query).toHaveBeenNthCalledWith(
-      1,
+      2,
       expect.stringContaining('INSERT INTO weather_search_history'),
       ['user@example.com', 'Milan', '45.464:9.190', 'Milan', null, 'Italy', 45.4642, 9.19, 'search'],
     );
     expect(client.query).toHaveBeenNthCalledWith(
-      2,
+      3,
       expect.stringContaining('DELETE FROM weather_search_history'),
       ['user@example.com', 8],
     );
