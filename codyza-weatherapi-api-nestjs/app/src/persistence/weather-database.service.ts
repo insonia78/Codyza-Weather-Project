@@ -5,6 +5,7 @@ import {
   ServiceUnavailableException,
 } from '@nestjs/common';
 import { Pool, type QueryResult, type QueryResultRow } from 'pg';
+import { buildDatabasePoolConfig } from './database-pool.config.js';
 
 const observabilityDatabaseUrlEnvVar = 'WEATHER_OBSERVABILITY_DATABASE_URL';
 const searchHistoryDatabaseUrlEnvVar = 'WEATHER_SEARCH_HISTORY_DATABASE_URL';
@@ -36,11 +37,9 @@ export class WeatherDatabaseService implements OnModuleDestroy {
     }
 
     try {
-      this.pool = new Pool({
-        connectionString: databaseUrl,
-        max: 10,
-        ssl: this.shouldUseSsl(databaseUrl) ? { rejectUnauthorized: false } : undefined,
-      });
+      this.pool = new Pool(
+        buildDatabasePoolConfig(databaseUrl, this.shouldUseSsl(databaseUrl), 'WEATHER_DATABASE_POOL'),
+      );
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       throw new InternalServerErrorException(`Failed to initialize weather database client: ${message}`);

@@ -10,6 +10,7 @@ import { defer, from, interval, of, type Observable } from 'rxjs';
 import { catchError, concatMap, map, startWith } from 'rxjs/operators';
 
 import { CacheMetricsService } from './cache-metrics.service.js';
+import { buildDatabasePoolConfig } from '../persistence/database-pool.config.js';
 import type {
   AdminDashboardSnapshot,
   AdminRequestLogRow,
@@ -247,11 +248,9 @@ export class AdminService implements OnModuleDestroy {
     }
 
     try {
-      this.pool = new Pool({
-        connectionString: databaseUrl,
-        max: 10,
-        ssl: this.shouldUseSsl(databaseUrl) ? { rejectUnauthorized: false } : undefined,
-      });
+      this.pool = new Pool(
+        buildDatabasePoolConfig(databaseUrl, this.shouldUseSsl(databaseUrl), 'WEATHER_OBSERVABILITY_POOL'),
+      );
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error);
       throw new InternalServerErrorException(`Failed to initialize observability database client: ${message}`);

@@ -126,6 +126,13 @@ These endpoints expect the authenticated user identity in the `X-User-Id` header
 
 Set `WEATHER_SEARCH_HISTORY_DATABASE_URL` so the search-history and protected profile services can persist user data in PostgreSQL. If that variable is not set, the Nest app now falls back to `WEATHER_OBSERVABILITY_DATABASE_URL`, then `DATABASE_URL`, which helps environments that share a single PostgreSQL instance across admin observability and user profile storage.
 
+The search-history/profile database client uses an explicit `pg.Pool` with configurable settings:
+
+- `WEATHER_DATABASE_POOL_MAX`
+- `WEATHER_DATABASE_POOL_IDLE_TIMEOUT_MS`
+- `WEATHER_DATABASE_POOL_CONNECTION_TIMEOUT_MS`
+- `WEATHER_DATABASE_POOL_MAX_LIFETIME_SECONDS`
+
 The Nest API now bootstraps the `weather_search_history` table and its indexes automatically on first use, and it backfills newly introduced columns plus the unique user/location index in older deployments, so both new and already-running environments do not need a separate manual migration before recent-search or admin top-search features can work.
 
 ```sql
@@ -179,6 +186,15 @@ They aggregate:
 - runtime and database health
 
 Request logs are persisted to PostgreSQL by a dedicated admin module and middleware. Configure `WEATHER_OBSERVABILITY_DATABASE_URL`, or let it fall back to `WEATHER_SEARCH_HISTORY_DATABASE_URL` / `DATABASE_URL`.
+
+The observability database client also uses an explicit `pg.Pool`, with optional admin-specific overrides:
+
+- `WEATHER_OBSERVABILITY_POOL_MAX`
+- `WEATHER_OBSERVABILITY_POOL_IDLE_TIMEOUT_MS`
+- `WEATHER_OBSERVABILITY_POOL_CONNECTION_TIMEOUT_MS`
+- `WEATHER_OBSERVABILITY_POOL_MAX_LIFETIME_SECONDS`
+
+If an observability-specific pool variable is not set, the service falls back to the shared `WEATHER_DATABASE_POOL_*` value before using its internal defaults.
 This endpoint now requires:
 
 - a JWT that was validated by the gateway
