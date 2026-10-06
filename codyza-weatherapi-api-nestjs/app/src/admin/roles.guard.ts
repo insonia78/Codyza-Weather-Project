@@ -9,12 +9,11 @@ import { Reflector } from '@nestjs/core';
 import type { Request } from 'express';
 
 import { ROLES_KEY } from './roles.decorator.js';
+import { assertTrustedGatewayHeaders } from '../security/gateway-request.util.js';
 
 type UserPayload = {
   role?: string;
 };
-
-const weatherGatewayCallerValue = 'weather-gateway';
 
 @Injectable()
 export class RolesGuard implements CanActivate {
@@ -42,17 +41,7 @@ export class RolesGuard implements CanActivate {
   }
 
   private assertTrustedGatewayRequest(request: Request): void {
-    const sharedSecret = process.env.WEATHER_GATEWAY_INTERNAL_SECRET?.trim() ?? '';
-    const gatewayCaller = request.header('x-weather-gateway-caller') ?? '';
-    const gatewaySecret = request.header('x-weather-gateway-secret') ?? '';
-
-    if (!sharedSecret) {
-      throw new UnauthorizedException('Missing WEATHER_GATEWAY_INTERNAL_SECRET environment variable');
-    }
-
-    if (gatewayCaller !== weatherGatewayCallerValue || gatewaySecret !== sharedSecret) {
-      throw new UnauthorizedException('This endpoint only accepts trusted gateway requests');
-    }
+    assertTrustedGatewayHeaders((name) => request.header(name) ?? undefined);
   }
 
   private parseUserPayload(request: Request): UserPayload {

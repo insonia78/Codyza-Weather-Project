@@ -36,6 +36,21 @@ This app is validated with Node.js `24.19.0` and npm `11.17.0`.
 $ npm install
 ```
 
+## Gateway-only inbound traffic
+
+This Nest API now accepts inbound HTTP traffic only from the trusted Supabase weather gateway.
+
+- every request must include trusted `x-weather-gateway-caller` and `x-weather-gateway-secret` headers
+- the shared secret must match `WEATHER_GATEWAY_INTERNAL_SECRET`
+- the application now fails at startup if `WEATHER_GATEWAY_INTERNAL_SECRET` is missing
+- direct browser, curl, or third-party calls to the Nest API are rejected unless they come through the trusted gateway flow
+
+Set the same `WEATHER_GATEWAY_INTERNAL_SECRET` value in:
+
+- the Nest API environment
+- the Supabase `weather-gateway` function environment
+- related gateway-side functions such as the JWT validator that already use the shared secret
+
 ## Compile and run the project
 
 ```bash
