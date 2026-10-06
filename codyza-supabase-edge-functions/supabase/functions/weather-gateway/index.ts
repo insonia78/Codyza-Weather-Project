@@ -47,6 +47,7 @@ const jwtValidatorUrl = Deno.env.get("JWT_VALIDATOR_URL");
 const gatewayInternalSecret = Deno.env.get("WEATHER_GATEWAY_INTERNAL_SECRET");
 const CONTAINER_HOSTNAME = "host.docker.internal";
 const adminRole = "admin";
+const defaultRetryDelayMs = 250;
 
 type LogLevel = "info" | "warn" | "error";
 
@@ -90,6 +91,10 @@ function logGatewayEvent(level: LogLevel, event: string, details: Record<string,
   }
 
   console.log(message);
+}
+
+function delay(ms: number) {
+  return new Promise((resolve) => setTimeout(resolve, ms));
 }
 
 function getHeaderPresence(req: Request) {
@@ -501,6 +506,10 @@ function getAccountApiUrl(pathname: string) {
 async function fetchAccountApiResponse(
   pathname: string,
   body: Record<string, unknown>,
+  options?: {
+    attempts?: number;
+    retryableStatusCodes?: number[];
+  },
 ) {
   const headers = new Headers({
     "Content-Type": "application/json",
@@ -512,22 +521,55 @@ async function fetchAccountApiResponse(
     });
   }
 
-  const response = await fetch(getAccountApiUrl(pathname), {
-    method: "POST",
-    headers,
-    body: JSON.stringify(body),
-  });
+  const attempts = Math.max(1, options?.attempts ?? 1);
+  const retryableStatusCodes = new Set(options?.retryableStatusCodes ?? []);
+  let response: Response | null = null;
+  let lastError: unknown = null;
 
-  let responseBody: unknown = null;
-  try {
-    responseBody = await response.json();
-  } catch {
-    responseBody = null;
+  for (let attempt = 1; attempt <= attempts; attempt += 1) {
+    try {
+      response = await fetch(getAccountApiUrl(pathname), {
+        method: "POST",
+        headers,
+        body: JSON.stringify(body),
+      });
+
+      if (!retryableStatusCodes.has(response.status) || attempt === attempts) {
+        break;
+      }
+
+      logGatewayEvent("warn", "accounts.retrying-transient-response", {
+        pathname,
+        attempt,
+        status: response.status,
+      });
+    } catch (error) {
+      lastError = error;
+      if (attempt === attempts) {
+        throw error;
+      }
+
+      logGatewayEvent("warn", "accounts.retrying-transient-error", {
+        pathname,
+        attempt,
+        error: error instanceof Error ? error.message : String(error),
+      });
+    }
+
+    await delay(defaultRetryDelayMs * attempt);
+  }
+
+  if (!response) {
+    if (lastError instanceof Error) {
+      throw lastError;
+    }
+
+    throw new Error(`Account request for ${pathname} failed without a response.`);
   }
 
   return {
     response,
-    body: responseBody,
+    body: await response.json().catch(() => null) as unknown,
   };
 }
 
@@ -586,7 +628,10 @@ async function buildAdminAccessResponse(
     }, req);
   }
 
-  const { response, body } = await fetchAccountApiResponse("/accounts/access", { email });
+  const { response, body } = await fetchAccountApiResponse("/accounts/access", { email }, {
+    attempts: 3,
+    retryableStatusCodes: [500, 502, 503, 504],
+  });
   if (!response.ok) {
     return jsonResponse(response.status, body ?? { error: "Failed to read account access state" }, req);
   }
