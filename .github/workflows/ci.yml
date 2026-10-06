@@ -88,6 +88,8 @@ jobs:
   python-api:
     name: FastAPI registration API
     runs-on: ubuntu-latest
+    env:
+      POSTGRES_URL: postgresql+psycopg://localhost:5432/ci_test
     defaults:
       run:
         working-directory: codyza-weather-registration-api-python/api/v1

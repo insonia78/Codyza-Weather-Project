@@ -743,91 +743,6 @@ async function buildAdminCreatePasswordResponse(
     }, req);
   }
 
-  async function cleanupWeatherAccountData(
-    req: Request,
-    verifiedToken: VerifiedToken,
-    requestId: string,
-  ) {
-    if (!weatherApiUrl) {
-      throw new Error("Missing WEATHER_API_URL environment variable.");
-    }
-
-    const targetUrl = buildTargetUrl(weatherApiUrl, "/weather/profile", "", SERVICES.WEATHER);
-    const response = await fetchBackendResponse(
-      req,
-      SERVICES.WEATHER,
-      verifiedToken,
-      targetUrl,
-      null,
-      weatherApiUrl,
-      requestId,
-    );
-
-    if (!response.ok) {
-      const body = await parseBackendBody(response);
-      return {
-        ok: false,
-        errorResponse: jsonResponse(
-          response.status,
-          body ?? { error: "Failed to delete persisted weather account data" },
-          req,
-        ),
-      };
-    }
-
-    return {
-      ok: true,
-      errorResponse: null,
-    };
-  }
-
-  async function buildAccountDeactivateResponse(
-    req: Request,
-    verifiedToken: VerifiedToken | null,
-    requestId: string,
-  ) {
-    if (!verifiedToken) {
-      return jsonResponse(401, {
-        error: "Missing verified account identity for account deactivation",
-      }, req);
-    }
-
-    const accountEmail = verifiedToken?.payload && typeof verifiedToken.payload.sub === "string"
-      ? verifiedToken.payload.sub.trim()
-      : "";
-
-    if (!accountEmail) {
-      return jsonResponse(401, {
-        error: "Authenticated account email is required for account deactivation",
-      }, req);
-    }
-
-    const weatherCleanup = await cleanupWeatherAccountData(req, verifiedToken, requestId);
-    if (!weatherCleanup.ok) {
-      return weatherCleanup.errorResponse;
-    }
-
-    if (!isJwtTokenDatabaseConfigured()) {
-      return jsonResponse(500, {
-        error: "JWT token persistence must be configured before deleting an account.",
-      }, req);
-    }
-
-    await revokeJwtTokenRecordsForUser(accountEmail);
-
-    const { response, body } = await fetchAccountApiResponse("/accounts/deactivate", {
-      email: accountEmail,
-    });
-    if (!response.ok) {
-      return jsonResponse(response.status, body ?? { error: "Failed to delete account" }, req);
-    }
-
-    return jsonResponse(200, {
-      deleted: true,
-      email: accountEmail,
-    }, req);
-  }
-
   if (!isAdminCreatePasswordRequestBody(parsedBody)) {
     return jsonResponse(400, {
       error: "Request body must include string email and password fields",
@@ -875,6 +790,95 @@ async function buildAdminCreatePasswordResponse(
   }, req);
 }
 
+async function cleanupWeatherAccountData(
+  req: Request,
+  verifiedToken: VerifiedToken,
+  requestId: string,
+) {
+  if (!weatherApiUrl) {
+    throw new Error("Missing WEATHER_API_URL environment variable.");
+  }
+
+  const targetUrl = buildTargetUrl(weatherApiUrl, "/weather/profile", "", SERVICES.WEATHER);
+  const response = await fetchBackendResponse(
+    req,
+    SERVICES.WEATHER,
+    verifiedToken,
+    targetUrl,
+    null,
+    weatherApiUrl,
+    requestId,
+    {
+      methodOverride: "DELETE",
+      proxyPathOverride: "/weather/profile",
+    },
+  );
+
+  if (!response.ok) {
+    const body = await parseBackendBody(response);
+    return {
+      ok: false,
+      errorResponse: jsonResponse(
+        response.status,
+        body ?? { error: "Failed to delete persisted weather account data" },
+        req,
+      ),
+    };
+  }
+
+  return {
+    ok: true,
+    errorResponse: null,
+  };
+}
+
+async function buildAccountDeactivateResponse(
+  req: Request,
+  verifiedToken: VerifiedToken | null,
+  requestId: string,
+) {
+  if (!verifiedToken) {
+    return jsonResponse(401, {
+      error: "Missing verified account identity for account deactivation",
+    }, req);
+  }
+
+  const accountEmail = verifiedToken?.payload && typeof verifiedToken.payload.sub === "string"
+    ? verifiedToken.payload.sub.trim()
+    : "";
+
+  if (!accountEmail) {
+    return jsonResponse(401, {
+      error: "Authenticated account email is required for account deactivation",
+    }, req);
+  }
+
+  const weatherCleanup = await cleanupWeatherAccountData(req, verifiedToken, requestId);
+  if (!weatherCleanup.ok) {
+    return weatherCleanup.errorResponse;
+  }
+
+  if (!isJwtTokenDatabaseConfigured()) {
+    return jsonResponse(500, {
+      error: "JWT token persistence must be configured before deleting an account.",
+    }, req);
+  }
+
+  await revokeJwtTokenRecordsForUser(accountEmail);
+
+  const { response, body } = await fetchAccountApiResponse("/accounts/deactivate", {
+    email: accountEmail,
+  });
+  if (!response.ok) {
+    return jsonResponse(response.status, body ?? { error: "Failed to delete account" }, req);
+  }
+
+  return jsonResponse(200, {
+    deleted: true,
+    email: accountEmail,
+  }, req);
+}
+
 function authorizeAdminToken(
   req: Request,
   verifiedToken: VerifiedToken | null,
@@ -900,11 +904,19 @@ async function fetchBackendResponse(
   requestBody: Blob | null,
   backendBaseUrl: string,
   requestId: string,
+  options?: {
+    methodOverride?: string;
+    proxyPathOverride?: string;
+  },
 ) {
   const headers = buildProxyHeaders(req, service, verifiedToken);
+  const method = options?.methodOverride ?? req.method;
+  const proxyPath = options?.proxyPathOverride ?? extractProxyPath(new URL(req.url).pathname);
 
   logGatewayEvent("info", "proxy.forwarding.started", {
     requestId,
+    method,
+    proxyPath,
     targetUrl: targetUrl.toString(),
     ...summarizeForwardHeaders(headers),
     ...summarizeRequestBody(requestBody),
@@ -912,7 +924,7 @@ async function fetchBackendResponse(
 
   try {
     return await fetch(targetUrl, {
-      method: req.method,
+      method,
       headers,
       body: requestBody,
     });
@@ -929,11 +941,10 @@ async function fetchBackendResponse(
       throw error;
     }
 
-    const requestUrl = new URL(req.url);
     const containerTargetUrl = buildTargetUrl(
       containerReachableBackendUrl,
-      extractProxyPath(requestUrl.pathname),
-      requestUrl.search,
+      proxyPath,
+      targetUrl.search,
     );
 
     logGatewayEvent("warn", "proxy.forwarding.retrying-with-container-host", {
@@ -944,7 +955,7 @@ async function fetchBackendResponse(
     });
 
     return await fetch(containerTargetUrl, {
-      method: req.method,
+      method,
       headers,
       body: requestBody,
     });

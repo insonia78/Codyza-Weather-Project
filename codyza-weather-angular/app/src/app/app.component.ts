@@ -137,6 +137,7 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   private profileUpdatedAt: string | null = null;
   private hydratingProfile = false;
   private observedComparisonSnapshots = false;
+  hasAuthenticatedSession = false;
 
   constructor(
     private readonly weatherService: WeatherService,
@@ -358,6 +359,10 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     return isDaytime ? 'theme-clear-day' : 'theme-clear-night';
   });
   ngOnInit(): void {
+    if (!this.authorizeDashboardAccess()) {
+      return;
+    }
+
     this.restoreState();
     this.registerAutocompleteSearch();
     this.registerProtectedDashboardSync();
@@ -555,6 +560,7 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private completeLogout(): void {
+    this.hasAuthenticatedSession = false;
     this.logoutInProgress = false;
     this.accountDeletionInProgress = false;
     this.notificationPanelOpen = false;
@@ -566,6 +572,22 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private redirectToRootApp(): void {
     window.location.assign(environment.rootAppUrl);
+  }
+
+  private authorizeDashboardAccess(): boolean {
+    if (typeof window === 'undefined') {
+      this.hasAuthenticatedSession = true;
+      return true;
+    }
+
+    const token = window.localStorage.getItem('jwt_token');
+    this.hasAuthenticatedSession = Boolean(token);
+    if (this.hasAuthenticatedSession) {
+      return true;
+    }
+
+    this.redirectToRootApp();
+    return false;
   }
 
   useCurrentLocation(): void {
