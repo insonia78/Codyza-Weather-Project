@@ -6,6 +6,7 @@ export const environment = {
   production: false,
   rootAppUrl: 'http://localhost:3000/',
   googleWeather: {
+    gatewayBaseUrl: '/api',
     apiBaseUrl: '/api/weather',
     gatewayApiKey: '',
     browserApiKey: 'AIzaSyB2-nsabDHy7b5PKAsTA3V2z7q9_Xuoyis',

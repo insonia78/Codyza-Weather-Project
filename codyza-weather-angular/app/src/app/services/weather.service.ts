@@ -20,7 +20,7 @@ export class WeatherService {
   };
 
   private readonly apiBaseUrl = environment.googleWeather.apiBaseUrl.replace(/\/+$/, '');
-  private readonly authBaseUrl = this.apiBaseUrl.replace(/\/weather$/, '');
+  private readonly gatewayBaseUrl = environment.googleWeather.gatewayBaseUrl.replace(/\/+$/, '');
 
   constructor(private readonly http: HttpClient) {}
 
@@ -62,7 +62,7 @@ export class WeatherService {
   }
 
   logout(): Observable<{ revoked: boolean }> {
-    return this.http.post<{ revoked: boolean }>(`${this.authBaseUrl}/auth/logout`, {}).pipe(
+    return this.http.post<{ revoked: boolean }>(`${this.gatewayBaseUrl}/auth/logout`, {}).pipe(
       catchError((error: HttpErrorResponse) => this.handleBackendError('Logout', error))
     );
   }
