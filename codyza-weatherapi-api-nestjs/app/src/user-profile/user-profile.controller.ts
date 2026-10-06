@@ -2,6 +2,7 @@ import {
   BadRequestException,
   Body,
   Controller,
+  Delete,
   Get,
   Headers,
   Put,
@@ -35,6 +36,12 @@ export class UserProfileController {
       this.requireUserEmail(userEmail),
       body,
     );
+  }
+
+  @Delete()
+  async deleteProfile(@Headers('x-user-id') userEmail: string | undefined) {
+    await this.userProfileService.deleteProfile(this.requireUserEmail(userEmail));
+    return { deleted: true };
   }
 
   private requireUserEmail(userEmail: string | undefined): string {

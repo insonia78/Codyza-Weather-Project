@@ -21,6 +21,7 @@ describe('AppController (e2e)', () => {
   const userProfileService = {
     getProfile: vi.fn(),
     saveProfile: vi.fn(),
+    deleteProfile: vi.fn(),
   };
   const adminService = {
     getDashboard: vi.fn(),
@@ -228,6 +229,20 @@ describe('AppController (e2e)', () => {
       .expect(({ body }) => {
         expect(body.temperatureUnit).toBe('fahrenheit');
         expect(body.selectedMapLayer).toBe('wind_new');
+      });
+  });
+
+  it('/api/weather/profile (DELETE) removes the persisted profile data', () => {
+    userProfileService.deleteProfile.mockResolvedValue(undefined);
+
+    return request(app.getHttpServer())
+      .delete('/api/weather/profile')
+      .set(weatherGatewayCallerHeader, weatherGatewayCallerValue)
+      .set(weatherGatewaySecretHeader, gatewaySecret)
+      .set('x-user-id', 'traveler@example.com')
+      .expect(200)
+      .expect(({ body }) => {
+        expect(body).toEqual({ deleted: true });
       });
   });
 

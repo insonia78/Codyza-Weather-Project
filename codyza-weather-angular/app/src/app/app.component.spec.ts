@@ -232,4 +232,57 @@ describe('AppComponent', () => {
     expect(app.apiMessage).toContain('Logging out... Waiting for token revocation confirmation.');
     expect(fixture.nativeElement.textContent).toContain('Logging out... Waiting for token revocation confirmation.');
   });
+
+  it('should delete the account, clear persisted data, and redirect to the root app', () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    const app = fixture.componentInstance;
+    const redirectSpy = spyOn<any>(app, 'redirectToRootApp').and.stub();
+    const confirmSpy = spyOn(window, 'confirm').and.returnValue(true);
+    const weatherService = TestBed.inject(WeatherService);
+    spyOn(weatherService, 'deactivateAccount').and.returnValue(of({
+      deleted: true,
+      email: 'weather.user@example.com',
+    }));
+
+    localStorage.setItem(WEATHER_STORAGE_KEYS.favorites, JSON.stringify([{ id: '1' }]));
+    localStorage.setItem('jwt_token', createJwtToken({ email: 'weather.user@example.com' }));
+
+    fixture.detectChanges();
+
+    const buttons = Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[];
+    const deleteButton = buttons.find((button) => button.textContent?.trim() === 'Deactivate account');
+
+    expect(deleteButton).toBeTruthy();
+
+    deleteButton?.click();
+    fixture.detectChanges();
+
+    expect(confirmSpy).toHaveBeenCalled();
+    expect(localStorage.getItem('jwt_token')).toBeNull();
+    expect(localStorage.getItem(WEATHER_STORAGE_KEYS.favorites)).toBeNull();
+    expect(redirectSpy).toHaveBeenCalled();
+  });
+
+  it('should keep the user signed in when account deletion fails', () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    const app = fixture.componentInstance;
+    const redirectSpy = spyOn<any>(app, 'redirectToRootApp').and.stub();
+    spyOn(window, 'confirm').and.returnValue(true);
+    const weatherService = TestBed.inject(WeatherService);
+    spyOn(weatherService, 'deactivateAccount').and.returnValue(throwError(() => new Error('Deletion failed upstream.')));
+
+    localStorage.setItem('jwt_token', createJwtToken({ email: 'weather.user@example.com' }));
+
+    fixture.detectChanges();
+
+    const buttons = Array.from(fixture.nativeElement.querySelectorAll('button')) as HTMLButtonElement[];
+    const deleteButton = buttons.find((button) => button.textContent?.trim() === 'Deactivate account');
+
+    deleteButton?.click();
+    fixture.detectChanges();
+
+    expect(localStorage.getItem('jwt_token')).toBeTruthy();
+    expect(app.errorMessage).toContain('Account deletion failed: Deletion failed upstream.');
+    expect(redirectSpy).not.toHaveBeenCalled();
+  });
 });

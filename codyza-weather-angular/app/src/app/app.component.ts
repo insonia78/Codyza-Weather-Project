@@ -129,6 +129,7 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly searchInput$ = new Subject<string>();
   private readonly profileSaveRequests$ = new Subject<void>();
   private logoutInProgress = false;
+  private accountDeletionInProgress = false;
   private notificationPanelOpen = false;
   private notificationPreferencesState: NotificationPreferences = { ...defaultNotificationPreferences };
   private profileSyncInProgress = false;
@@ -213,6 +214,10 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
 
   get isLogoutInProgress(): boolean {
     return this.logoutInProgress;
+  }
+
+  get isAccountDeletionInProgress(): boolean {
+    return this.accountDeletionInProgress;
   }
 
   get loggedInEmail(): string {
@@ -450,7 +455,7 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   logout(): void {
-    if (this.logoutInProgress) {
+    if (this.logoutInProgress || this.accountDeletionInProgress) {
       return;
     }
 
@@ -478,6 +483,46 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
         this.logoutInProgress = false;
         this.weatherStore.setApiMessage('');
         this.weatherStore.setErrorMessage(`Logout failed: ${error.message}`);
+      },
+    });
+  }
+
+  deactivateAccount(): void {
+    if (this.logoutInProgress || this.accountDeletionInProgress) {
+      return;
+    }
+
+    if (!localStorage.getItem('jwt_token') || !this.loggedInEmail) {
+      this.weatherStore.setErrorMessage('Account deactivation requires an active signed-in session.');
+      return;
+    }
+
+    const confirmed = window.confirm(
+      `Delete the Codyza Weather account for ${this.loggedInEmail}? This permanently removes the account, favorites, recent searches, saved comparisons, and profile settings.`,
+    );
+    if (!confirmed) {
+      return;
+    }
+
+    this.accountDeletionInProgress = true;
+    this.weatherStore.setErrorMessage('');
+    this.weatherStore.setApiMessage('Deleting your account and saved weather data...');
+
+    this.weatherService.deactivateAccount().subscribe({
+      next: (response) => {
+        if (!response.deleted) {
+          this.accountDeletionInProgress = false;
+          this.weatherStore.setApiMessage('');
+          this.weatherStore.setErrorMessage('Account deletion failed because the backend did not confirm the deletion.');
+          return;
+        }
+
+        this.completeLogout();
+      },
+      error: (error: Error) => {
+        this.accountDeletionInProgress = false;
+        this.weatherStore.setApiMessage('');
+        this.weatherStore.setErrorMessage(`Account deletion failed: ${error.message}`);
       },
     });
   }
@@ -511,6 +556,7 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private completeLogout(): void {
     this.logoutInProgress = false;
+    this.accountDeletionInProgress = false;
     this.notificationPanelOpen = false;
     this.weatherStore.setApiMessage('');
     localStorage.removeItem('jwt_token');

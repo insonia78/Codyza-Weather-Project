@@ -8,6 +8,7 @@ from fastapi import HTTPException, status
 from controller.accounts_controller.accounts_controller import (
     create_account,
     create_account_password,
+    deactivate_account,
     get_account_access,
     request_password_reset,
     reset_account_password,
@@ -15,6 +16,8 @@ from controller.accounts_controller.accounts_controller import (
 from controller.accounts_controller.models.models import (
     Account,
     AccountBase,
+    AccountDeactivatedPublic,
+    AccountDeactivationRequest,
     AccountEmailLookup,
     AccountPasswordResetConfirm,
     AccountPasswordResetRequest,
@@ -284,6 +287,32 @@ class CreateAccountTests(unittest.IsolatedAsyncioTestCase):
         self.assertNotEqual(existing_account.password, "stored-password-hash")
         self.assertTrue(existing_account.password_salt)
         self.assertIsNotNone(reset_token.used_at)
+        session.commit.assert_called_once()
+
+    def test_deactivate_account_deletes_password_resets_and_account(self) -> None:
+        existing_account = Account(
+            id=13,
+            email="user@example.com",
+            password="stored-password-hash",
+            password_salt="stored-salt",
+            role="user",
+        )
+        exec_result = Mock()
+        exec_result.first.return_value = existing_account
+
+        session = Mock()
+        session.exec.side_effect = [exec_result, Mock()]
+
+        response = deactivate_account(
+            AccountDeactivationRequest(email="user@example.com"),
+            session,
+        )
+
+        self.assertIsInstance(response, AccountDeactivatedPublic)
+        self.assertTrue(response.deleted)
+        self.assertEqual(response.email, "user@example.com")
+        self.assertEqual(session.exec.call_count, 2)
+        session.delete.assert_called_once_with(existing_account)
         session.commit.assert_called_once()
 
 

@@ -79,3 +79,12 @@ class AccountPasswordResetRequestedPublic(SQLModel):
 class AccountPasswordResetCompletedPublic(SQLModel):
     reset: bool = True
     message: str
+
+
+class AccountDeactivationRequest(SQLModel):
+    email: EmailStr = Field()
+
+
+class AccountDeactivatedPublic(SQLModel):
+    deleted: bool = True
+    email: EmailStr

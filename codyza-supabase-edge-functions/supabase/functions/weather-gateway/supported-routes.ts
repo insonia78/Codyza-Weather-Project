@@ -42,6 +42,12 @@ export const supportedRoutes = [
     ]
   },
   {
+    pattern: /^\/accounts\/deactivate\/?$/,
+    methods: [
+      "POST"
+    ]
+  },
+  {
     pattern: /^\/accounts\/\d+\/?$/,
     methods: [
       "PUT",
@@ -127,7 +133,8 @@ export const supportedRoutes = [
     pattern: /^\/weather\/profile\/?$/,
     methods: [
       "GET",
-      "PUT"
+      "PUT",
+      "DELETE"
     ]
   }
 ];

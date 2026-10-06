@@ -116,6 +116,17 @@ export class UserProfileService {
     return this.getProfile(userEmail);
   }
 
+  async deleteProfile(userEmail: string): Promise<void> {
+    await this.ensureProfileSchema();
+    await Promise.all([
+      this.searchHistoryService.clearRecentSearches(userEmail),
+      this.getDatabaseClient().query(
+        'DELETE FROM weather_user_profiles WHERE user_email = $1',
+        [userEmail],
+      ),
+    ]);
+  }
+
   protected getDatabaseClient(): WeatherDatabaseQueryClient {
     return this.databaseService.getClient();
   }

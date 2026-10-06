@@ -262,4 +262,32 @@ describe('UserProfileService', () => {
       ],
     );
   });
+
+  it('deletes persisted profile data and clears recent searches', async () => {
+    const searchHistoryService = {
+      clearRecentSearches: vi.fn().mockResolvedValue(undefined),
+    };
+    const client = {
+      query: vi
+        .fn()
+        .mockResolvedValueOnce(createQueryResult([]))
+        .mockResolvedValueOnce(createQueryResult([])),
+    };
+
+    const service = new UserProfileService(
+      {
+        getClient: () => client as WeatherDatabaseQueryClient,
+      } as never,
+      searchHistoryService as never,
+    );
+
+    await expect(service.deleteProfile('weather.user@example.com')).resolves.toBeUndefined();
+
+    expect(searchHistoryService.clearRecentSearches).toHaveBeenCalledWith('weather.user@example.com');
+    expect(client.query).toHaveBeenNthCalledWith(
+      2,
+      'DELETE FROM weather_user_profiles WHERE user_email = $1',
+      ['weather.user@example.com'],
+    );
+  });
 });

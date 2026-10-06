@@ -9,11 +9,14 @@ function findRoute(pathname: string) {
 Deno.test("supportedRoutes allow weather profile and search history operations", () => {
   const profileRoute = findRoute("/weather/profile");
   const searchHistoryRoute = findRoute("/weather/search-history");
+  const deactivateRoute = findRoute("/accounts/deactivate");
 
   assert(profileRoute);
   assert(searchHistoryRoute);
-  assertEquals(profileRoute.methods.sort(), ["GET", "PUT"]);
+  assert(deactivateRoute);
+  assertEquals(profileRoute.methods.sort(), ["DELETE", "GET", "PUT"]);
   assertEquals(searchHistoryRoute.methods.sort(), ["DELETE", "GET", "POST"]);
+  assertEquals(deactivateRoute.methods, ["POST"]);
 });
 
 Deno.test("supportedRoutes allow administrator authentication and dashboard routes", () => {

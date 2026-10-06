@@ -184,3 +184,20 @@ export async function revokeJwtTokenRecord(
     return rows[0] ? normalizeJwtTokenRecord(rows[0]) : null;
   });
 }
+
+export async function revokeJwtTokenRecordsForUser(
+  userId: string,
+  revokedAt = Math.floor(Date.now() / 1000),
+): Promise<number> {
+  return await withJwtTokenDatabase(async (sql) => {
+    const rows = await sql<Array<{ tokenId: string }>>`
+      update jwt_tokens
+      set revoked_at = ${revokedAt}
+      where user_id = ${userId}
+        and revoked_at is null
+      returning token_id as "tokenId"
+    `;
+
+    return rows.length;
+  });
+}

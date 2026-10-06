@@ -56,6 +56,7 @@ Status legend:
 | Login | PASS | User login and admin login flows are implemented and live-tested. |
 | Logout | PASS | User and admin logout routes exist. |
 | Password reset | PASS | Reset request and reset confirmation flow are implemented. |
+| Deactivate account | PASS | Authenticated users can permanently delete their account and weather-owned profile/history data through the gateway-backed dashboard flow. |
 | Protected user dashboard | PASS | Gateway-authenticated weather/profile flows exist. |
 | Saved locations | PASS | Covered by persisted favorites and comparisons in the user profile. |
 | Notification preferences | PASS | Persisted `notification_preferences` field with daily summary, severe weather, air quality, and weekend outlook toggles. |

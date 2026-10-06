@@ -28,7 +28,7 @@ Implemented in the current codebase:
 - severe weather alerts, air quality, and weather map layers
 - Celsius or Fahrenheit plus metric or imperial preferences
 - recent searches, favorites, saved multi-city comparisons, and notification preferences
-- protected signup, login, logout, and password reset flows
+- protected signup, login, logout, password reset, and account deactivation flows
 - admin observability dashboard with usage, failed requests, search demand, cache metrics, active users, and system health
 - trusted gateway-only access into protected backend services
 
@@ -44,7 +44,7 @@ Implemented in the current codebase:
 ## Submission artifacts
 
 - Acceptance checklist: [docs/acceptance-checklist.md](./docs/acceptance-checklist.md)
-- API documentation: [docs/API.md](./docs/API.md)
+- API documentation: [API-SERVICE-CONTRACTS.md](./API-SERVICE-CONTRACTS.md)
 - Database schema and ER diagram: [docs/database-schema.md](./docs/database-schema.md)
 - Deployment guide: [docs/deployment.md](./docs/deployment.md)
 - Shared environment template: [.env.example](./.env.example)
