@@ -6,6 +6,7 @@
 
 - Health check endpoint
 - Create, authenticate, update, partially update, and delete accounts
+- Salted and hashed password storage using PBKDF2-HMAC-SHA256
 - PostgreSQL connection through SQLModel and SQLAlchemy
 - Database existence check during startup
 - Table creation during startup
@@ -44,6 +45,7 @@ Required environment variables:
 - `JWT_SECRET_KEY`: Secret used to validate incoming bearer tokens
 - `JWT_ALGORITHM`: JWT signing algorithm, defaults to `HS256`
 - `WEATHER_GATEWAY_INTERNAL_SECRET`: shared secret used to trust requests proxied by the Supabase `weather-gateway` edge function
+- `ALLOWED_INBOUND_ORIGINS`: comma-separated list of allowed frontend origins, for example `https://app.example.com,https://admin.example.com`
 
 Example shape:
 
@@ -53,6 +55,7 @@ POSTGRES_FILE_NAME=app_database
 JWT_SECRET_KEY=replace-with-a-secure-secret
 JWT_ALGORITHM=HS256
 WEATHER_GATEWAY_INTERNAL_SECRET=replace-with-the-shared-gateway-secret
+ALLOWED_INBOUND_ORIGINS=https://app.example.com,https://admin.example.com
 ```
 
 ## Local development
@@ -106,6 +109,14 @@ X-Weather-Gateway-Secret: <shared-secret>
 If either header is missing or invalid, the API returns `403 Forbidden`.
 If `WEATHER_GATEWAY_INTERNAL_SECRET` is unset, the middleware allows requests through without enforcing gateway headers.
 
+## Inbound traffic allowlist
+
+When `ALLOWED_INBOUND_ORIGINS` is configured, the API checks inbound `Origin` and `Referer` headers and only accepts requests from the configured origins. Origins are normalized to `scheme://host[:port]`.
+
+- Requests from non-browser clients that do not send `Origin` or `Referer` headers are still allowed.
+- Browser preflight requests continue to work through CORS for the configured origins.
+- Requests with a non-allowed origin receive `403 Forbidden`.
+
 ## Endpoints
 
 ### Health
@@ -156,6 +167,17 @@ Example request body:
 }
 ```
 
+Example response body:
+
+```json
+{
+  "id": 1,
+  "email": "user@example.com"
+}
+```
+
+If the email is already registered, the API returns `409 Conflict`.
+
 #### `PUT /accounts/{id}`
 
 Replaces an existing account.
@@ -192,6 +214,7 @@ The current account model includes:
 - `id: int`
 - `email: valid email address`
 - `password: string with minimum length of 8 characters`
+- `password_salt: stored server-side salt used to derive the password hash`
 
 ## Notes
 
@@ -199,3 +222,4 @@ The current account model includes:
 - Database errors are surfaced as `500` responses.
 - The API currently creates tables automatically on startup.
 - Request validation rejects invalid email addresses and passwords shorter than 8 characters.
+- Passwords are never stored in plain text and are not returned in API responses.

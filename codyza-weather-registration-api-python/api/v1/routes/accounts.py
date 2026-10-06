@@ -20,7 +20,6 @@ def do_get(body: AccountBase, session: SessionDep) -> AccountEmailPublic:
 
 @accounts_router.post("/", status_code=status.HTTP_201_CREATED)
 async def do_post(body: AccountBase, session: SessionDep) -> AccountPublic:
-    print("accepted request:")
     return await create_account(body, session)
 
 

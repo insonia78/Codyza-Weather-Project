@@ -6,31 +6,29 @@ from typing import Annotated
 PasswordStr = Annotated[str, StringConstraints(min_length=8)]
 
 
-# Base model class - shared fields for all representations of a room
 class AccountBase(SQLModel):
-    email:str = Field()
-    password:str = Field()
+    email: EmailStr = Field()
+    password: PasswordStr = Field()
 
 
-# Account table model - maps to the "accounts" database table
-class Account(AccountBase, table=True):
+class Account(SQLModel, table=True):
     __tablename__: str = "accounts"
 
     id: int | None = Field(default=None, primary_key=True)
+    email: EmailStr = Field()
+    password: str = Field()
+    password_salt: str | None = Field(default=None)
 
 
-# Account response model - the payload to send back to the client
-# Guaranteed to have ID for the account (account must exist)
-class AccountPublic(AccountBase):
+class AccountPublic(SQLModel):
     id: int
+    email: EmailStr
 
 
 class AccountEmailPublic(SQLModel):
-    email: str
+    email: EmailStr
 
 
-# Account update model - all fields can be optional because
-# we fallback to None
 class AccountUpdate(SQLModel):
     email: EmailStr | None = None
     password: PasswordStr | None = None

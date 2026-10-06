@@ -41,6 +41,15 @@ def ensure_database_exists():
 def create_db_and_tables():
     ensure_database_exists()
     SQLModel.metadata.create_all(engine)
+    with engine.begin() as connection:
+        connection.execute(
+            text(
+                """
+                ALTER TABLE accounts
+                ADD COLUMN IF NOT EXISTS password_salt VARCHAR(64)
+                """
+            )
+        )
 
 def get_session():
     with Session(engine) as session:
