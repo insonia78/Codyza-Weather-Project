@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { fetchGatewayWithRetry } from "../../../../lib/gateway-fetch";
 import { clearAdminSessionCookie, getAdminSessionFromCookies } from "../../../../lib/admin-session";
 
 export const dynamic = "force-dynamic";
@@ -20,7 +21,7 @@ export async function POST() {
 
     let revokeResponse: Response;
     try {
-      revokeResponse = await fetch(`${gatewayBaseUrl.replace(/\/+$/, "")}/auth/logout`, {
+      revokeResponse = await fetchGatewayWithRetry(`${gatewayBaseUrl.replace(/\/+$/, "")}/auth/logout`, {
         method: "POST",
         headers,
         cache: "no-store",

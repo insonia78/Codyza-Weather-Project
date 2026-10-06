@@ -1,5 +1,7 @@
 import { NextResponse } from "next/server";
 
+import { fetchGatewayWithRetry } from "../../../../lib/gateway-fetch";
+
 export const dynamic = "force-dynamic";
 
 type AccessRequestBody = {
@@ -38,7 +40,7 @@ export async function POST(request: Request) {
 
   let gatewayResponse: Response;
   try {
-    gatewayResponse = await fetch(`${gatewayBaseUrl.replace(/\/+$/, "")}/admin/access`, {
+    gatewayResponse = await fetchGatewayWithRetry(`${gatewayBaseUrl.replace(/\/+$/, "")}/admin/access`, {
       method: "POST",
       headers,
       body: JSON.stringify({ email }),

@@ -1,5 +1,6 @@
 import { NextResponse } from "next/server";
 
+import { fetchGatewayWithRetry } from "../../../../lib/gateway-fetch";
 import { getAdminSessionCookieMaxAge, setAdminSessionCookie } from "../../../../lib/admin-session";
 
 export const dynamic = "force-dynamic";
@@ -61,7 +62,7 @@ export async function POST(request: Request) {
 
   let gatewayResponse: Response;
   try {
-    gatewayResponse = await fetch(loginUrl, {
+    gatewayResponse = await fetchGatewayWithRetry(loginUrl, {
       method: "POST",
       headers,
       body: JSON.stringify({ email, password }),

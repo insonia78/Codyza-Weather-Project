@@ -1,3 +1,5 @@
+import { fetchGatewayWithRetry } from "./gateway-fetch";
+
 export type AdminDashboard = {
   totals: {
     requestsLast24Hours: number;
@@ -75,7 +77,7 @@ export async function getAdminDashboard(token: string): Promise<{ data: AdminDas
       apikey: gatewayApiKey,
     });
 
-    const response = await fetch(dashboardUrl, {
+    const response = await fetchGatewayWithRetry(dashboardUrl, {
       cache: "no-store",
       headers,
     });
