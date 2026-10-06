@@ -1,5 +1,6 @@
 export const weatherGatewayCallerHeader = "x-weather-gateway-caller";
 export const weatherGatewaySecretHeader = "x-weather-gateway-secret";
+export const weatherGatewayAuthorizationHeader = "x-weather-gateway-authorization";
 export const weatherGatewayCallerValue = "weather-gateway";
 export function buildWeatherGatewayHeaders(secret) {
   return {

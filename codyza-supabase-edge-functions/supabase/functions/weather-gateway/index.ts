@@ -4,7 +4,10 @@
 // Setup type definitions for built-in Supabase Runtime APIs
 // import "@supabase/functions-js/edge-runtime.d.ts";
 
-import { buildWeatherGatewayHeaders } from "../_shared/weather-gateway-auth.ts";
+import {
+  buildWeatherGatewayHeaders,
+  weatherGatewayAuthorizationHeader,
+} from "../_shared/weather-gateway-auth.ts";
 import { buildForwardHeaders as buildWeatherForwardHeaders } from "./build-forward-headers.ts";
 import { SERVICES } from "./models.ts";
 import { supportedRoutes } from "./supported-routes.ts";
@@ -24,6 +27,7 @@ const defaultCorsHeaders = {
     "origin",
     "x-weather-gateway-caller",
     "x-weather-gateway-secret",
+    weatherGatewayAuthorizationHeader,
   ].join(", "),
   "Access-Control-Allow-Methods": "GET, POST, PUT, PATCH, DELETE, OPTIONS",
 };
@@ -91,6 +95,7 @@ function getHeaderPresence(req: Request) {
   return {
     hasApiKey: Boolean(req.headers.get("apikey")),
     hasAuthorization: Boolean(req.headers.get("authorization") ?? req.headers.get("Authorization")),
+    hasGatewayAuthorization: Boolean(req.headers.get(weatherGatewayAuthorizationHeader)),
     hasGatewayCaller: Boolean(req.headers.get("x-weather-gateway-caller")),
     hasGatewaySecret: Boolean(req.headers.get("x-weather-gateway-secret")),
   };
@@ -186,6 +191,7 @@ function summarizeForwardHeaders(headers: Headers) {
   return {
     hasApiKey: headers.has("apikey"),
     hasAuthorization: headers.has("authorization") || headers.has("Authorization"),
+    hasGatewayAuthorization: headers.has(weatherGatewayAuthorizationHeader),
     hasUserId: headers.has("X-User-Id"),
     hasUserType: headers.has("X-User-Type"),
     hasUserPayload: headers.has("X-User-Payload"),
@@ -318,6 +324,15 @@ function buildProxyHeaders(
 
   headers.delete("host");
   headers.delete("content-length");
+
+  if (service === SERVICES.AUTH) {
+    const clientAuthorization = headers.get("authorization") ?? headers.get("Authorization");
+    if (clientAuthorization) {
+      headers.set(weatherGatewayAuthorizationHeader, clientAuthorization);
+      headers.delete("authorization");
+      headers.delete("Authorization");
+    }
+  }
 
   if ((service === SERVICES.ACCOUNTS || service === SERVICES.AUTH) && gatewayInternalSecret) {
     const gatewayHeaders = buildWeatherGatewayHeaders(gatewayInternalSecret);

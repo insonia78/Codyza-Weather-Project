@@ -7,13 +7,15 @@ import {
 } from "../_shared/jwt-token-store.ts";
 import {
   authorizeWeatherGatewayRequest,
+  weatherGatewayAuthorizationHeader,
   weatherGatewayCallerHeader,
   weatherGatewaySecretHeader,
 } from "../_shared/weather-gateway-auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": `authorization, x-client-info, apikey, content-type, ${weatherGatewayCallerHeader}, ${weatherGatewaySecretHeader}`,
+  "Access-Control-Allow-Headers":
+    `authorization, x-client-info, apikey, content-type, ${weatherGatewayCallerHeader}, ${weatherGatewaySecretHeader}, ${weatherGatewayAuthorizationHeader}`,
   "Access-Control-Allow-Methods": "POST, OPTIONS",
 };
 
@@ -51,10 +53,32 @@ function isRevokeTokenRequestBody(value: unknown): value is RevokeTokenRequestBo
   return typeof candidate.tokenId === "undefined" || typeof candidate.tokenId === "string";
 }
 
-async function getTokenIdFromAuthorizationHeader(req: Request): Promise<string | null> {
-  const authorization = req.headers.get("authorization") ?? req.headers.get("Authorization");
-  if (!authorization?.startsWith("Bearer ")) {
-    logRevokeEvent("authorization.missing-bearer");
+function getBearerAuthorization(req: Request) {
+  const gatewayAuthorization = req.headers.get(weatherGatewayAuthorizationHeader);
+  if (gatewayAuthorization?.startsWith("Bearer ")) {
+    return {
+      value: gatewayAuthorization,
+      source: weatherGatewayAuthorizationHeader,
+    };
+  }
+
+  const requestAuthorization = req.headers.get("authorization") ?? req.headers.get("Authorization");
+  if (requestAuthorization?.startsWith("Bearer ")) {
+    return {
+      value: requestAuthorization,
+      source: "authorization",
+    };
+  }
+
+  return null;
+}
+
+async function getTokenIdFromBearerToken(req: Request): Promise<string | null> {
+  const bearerAuthorization = getBearerAuthorization(req);
+  if (!bearerAuthorization) {
+    logRevokeEvent("authorization.missing-bearer", {
+      checkedHeaders: [weatherGatewayAuthorizationHeader, "authorization"],
+    });
     return null;
   }
 
@@ -62,10 +86,11 @@ async function getTokenIdFromAuthorizationHeader(req: Request): Promise<string |
     throw new Error("Missing MY_JWT_SECRET or CUSTOM_JWT_SECRET environment variable.");
   }
 
-  const token = authorization.slice("Bearer ".length);
+  const token = bearerAuthorization.value.slice("Bearer ".length);
   const verified = await jwtVerify(token, encoder.encode(customJwtSecret));
   const tokenId = verified.payload.jti;
   logRevokeEvent("authorization.verified", {
+    source: bearerAuthorization.source,
     hasTokenId: typeof tokenId === "string" && tokenId.trim().length > 0,
     subject: typeof verified.payload.sub === "string" ? verified.payload.sub : null,
   });
@@ -111,7 +136,7 @@ export default {
       }
 
       const explicitTokenId = typeof requestBody.tokenId === "string" ? requestBody.tokenId.trim() : "";
-      const tokenId = explicitTokenId || await getTokenIdFromAuthorizationHeader(req);
+      const tokenId = explicitTokenId || await getTokenIdFromBearerToken(req);
       logRevokeEvent("token.resolution.completed", {
         usedExplicitTokenId: Boolean(explicitTokenId),
         tokenId,
@@ -119,7 +144,7 @@ export default {
 
       if (!tokenId) {
         return jsonResponse(400, {
-          error: "Provide tokenId in the request body or a valid Bearer token in the Authorization header.",
+          error: "Provide tokenId in the request body or a valid bearer token forwarded by weather-gateway.",
         });
       }
 
