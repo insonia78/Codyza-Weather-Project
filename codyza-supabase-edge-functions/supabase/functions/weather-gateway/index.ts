@@ -39,11 +39,32 @@ const weatherApiUrl =
   Deno.env.get("NEST_WEATHER_API_URL") ??
   Deno.env.get("BACKEND_URL");
 const jwtCreatorUrl = Deno.env.get("JWT_CREATOR_URL");
-const jwtRevokeUrl = Deno.env.get("JWT_REVOKE_URL");
+const jwtValidatorUrl = Deno.env.get("JWT_VALIDATOR_URL");
 const gatewayInternalSecret = Deno.env.get("WEATHER_GATEWAY_INTERNAL_SECRET");
 const CONTAINER_HOSTNAME = "host.docker.internal";
 
 type LogLevel = "info" | "warn" | "error";
+
+function deriveSiblingFunctionUrl(functionUrl: string | undefined, functionName: string): string | null {
+  if (!functionUrl) {
+    return null;
+  }
+
+  const parsedUrl = new URL(functionUrl);
+  const pathSegments = parsedUrl.pathname.split("/").filter(Boolean);
+  if (!pathSegments.length) {
+    return null;
+  }
+
+  pathSegments[pathSegments.length - 1] = functionName;
+  parsedUrl.pathname = `/${pathSegments.join("/")}`;
+  return parsedUrl.toString();
+}
+
+const jwtRevokeUrl =
+  Deno.env.get("JWT_REVOKE_URL") ??
+  deriveSiblingFunctionUrl(jwtCreatorUrl, "jwt-revoke") ??
+  deriveSiblingFunctionUrl(jwtValidatorUrl, "jwt-revoke");
 
 function logGatewayEvent(level: LogLevel, event: string, details: Record<string, unknown> = {}) {
   const payload = {
@@ -569,10 +590,32 @@ export default {
         backendBaseUrl,
         requestId,
       );
+
+      if (service === SERVICES.AUTH) {
+        logGatewayEvent("info", "auth.logout.forwarded", {
+          requestId,
+          proxyPath,
+          targetUrl: targetUrl.toString(),
+          status: backendResponse.status,
+          ok: backendResponse.ok,
+        });
+      }
+
       const responseHeaders = buildResponseHeaders(backendResponse.headers, req);
       const responseBody = canResponseHaveBody(req.method, backendResponse.status)
         ? await parseBackendBody(backendResponse)
         : null;
+
+      if (service === SERVICES.AUTH) {
+        logGatewayEvent(backendResponse.ok ? "info" : "warn", "auth.logout.response", {
+          requestId,
+          proxyPath,
+          status: backendResponse.status,
+          ok: backendResponse.ok,
+          ...summarizeBodyPayload(responseBody),
+          responseBody,
+        });
+      }
 
       logGatewayEvent("info", "proxy.completed", {
         requestId,

@@ -45,7 +45,6 @@ The following variables are available:
 - `REACT_APP_APP_NAME`: display name shown in the UI
 - `REACT_APP_ENVIRONMENT`: current environment label
 - `REACT_APP_API_BASE_URL`: API base URL used by the frontend configuration
-- `REACT_APP_GATEWAY_BASE_URL`: weather-gateway base URL used for JWT-protected gateway actions such as logout revocation
 - `REACT_APP_CODYZA_WEATHER_URL`: URL used after successful login or registration to send the user to the weather application
 
 Create React App loads these automatically:
