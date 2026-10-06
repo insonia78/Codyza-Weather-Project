@@ -57,6 +57,17 @@ Service-specific setup docs:
 - [codyza-weatherapi-api-nestjs/app/README.md](./codyza-weatherapi-api-nestjs/app/README.md)
 - [codyza-weather-registration-api-python/README.md](./codyza-weather-registration-api-python/README.md)
 
+## Continuous integration
+
+GitHub Actions now validates the full multi-application workspace through [.github/workflows/ci.yml](./.github/workflows/ci.yml):
+
+- React auth app unit and route-flow tests plus production build
+- Angular weather dashboard tests plus production build
+- Next.js admin tests, lint, and production build
+- NestJS unit and e2e API coverage plus build
+- FastAPI unittest suites plus Python compile checks
+- Supabase Edge Function Deno tests
+
 ## Test access
 
 The platform supports self-service user registration, so a seeded end-user account is not strictly required for evaluation. For admin validation, provision an account in the registration database with `role=admin`, or use an environment-specific admin test account managed outside the repository.

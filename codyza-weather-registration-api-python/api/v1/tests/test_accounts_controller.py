@@ -158,7 +158,7 @@ class CreateAccountTests(unittest.IsolatedAsyncioTestCase):
             session,
         )
 
-        self.assertEqual(account.email, "Admin.User@Example.com")
+        self.assertEqual(account.email, "Admin.User@example.com")
         executed_statement = session.exec.call_args.args[0]
         self.assertIn("lower(accounts.email)", str(executed_statement))
 

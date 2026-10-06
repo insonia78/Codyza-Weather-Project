@@ -1,0 +1,113 @@
+name: ci
+
+on:
+  push:
+    branches:
+      - main
+  pull_request:
+
+permissions:
+  contents: read
+
+env:
+  CI: true
+
+jobs:
+  react-auth:
+    name: React auth app
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: codyza-weather-react/app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: codyza-weather-react/app/package-lock.json
+      - run: npm ci
+      - run: npm test -- --watchAll=false --runInBand
+      - run: npm run build
+
+  angular-weather:
+    name: Angular weather app
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: codyza-weather-angular/app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: codyza-weather-angular/app/package-lock.json
+      - run: npm ci
+      - run: npm test -- --watch=false --browsers=ChromeHeadless
+      - run: npm run build
+
+  admin-next:
+    name: Next admin app
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: codyza-administration-nextjs/administration
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: codyza-administration-nextjs/administration/package-lock.json
+      - run: npm ci
+      - run: npm test -- --runInBand
+      - run: npm run lint
+      - run: npm run build
+
+  nest-api:
+    name: Nest weather API
+    runs-on: ubuntu-latest
+    env:
+      WEATHER_GATEWAY_INTERNAL_SECRET: ci-test-weather-gateway-secret
+    defaults:
+      run:
+        working-directory: codyza-weatherapi-api-nestjs/app
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 24
+          cache: npm
+          cache-dependency-path: codyza-weatherapi-api-nestjs/app/package-lock.json
+      - run: npm ci
+      - run: npm run test
+      - run: npm run test:e2e
+      - run: npm run build
+
+  python-api:
+    name: FastAPI registration API
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: codyza-weather-registration-api-python/api/v1
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+      - uses: astral-sh/setup-uv@v3
+      - run: uv sync --frozen
+      - run: uv run python -m unittest discover -s tests -p "test*.py"
+      - run: uv run python -m compileall .
+
+  edge-functions:
+    name: Supabase edge functions
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: denoland/setup-deno@v2
+        with:
+          deno-version: v2.x
+      - run: deno test supabase/functions/weather-gateway
+        working-directory: codyza-supabase-edge-functions
