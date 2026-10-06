@@ -18,6 +18,18 @@ export const supportedRoutes = [
     ]
   },
   {
+    pattern: /^\/accounts\/access\/?$/,
+    methods: [
+      "POST"
+    ]
+  },
+  {
+    pattern: /^\/accounts\/password\/setup\/?$/,
+    methods: [
+      "POST"
+    ]
+  },
+  {
     pattern: /^\/accounts\/\d+\/?$/,
     methods: [
       "PUT",
@@ -59,6 +71,24 @@ export const supportedRoutes = [
     pattern: /^\/admin\/dashboard\/?$/,
     methods: [
       "GET"
+    ]
+  },
+  {
+    pattern: /^\/admin\/access\/?$/,
+    methods: [
+      "POST"
+    ]
+  },
+  {
+    pattern: /^\/admin\/login\/?$/,
+    methods: [
+      "POST"
+    ]
+  },
+  {
+    pattern: /^\/admin\/create-password\/?$/,
+    methods: [
+      "POST"
     ]
   },
   {

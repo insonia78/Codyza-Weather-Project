@@ -1,5 +1,4 @@
 
-
 import os
 from typing import Annotated
 from dotenv import load_dotenv
@@ -47,6 +46,31 @@ def create_db_and_tables():
                 """
                 ALTER TABLE accounts
                 ADD COLUMN IF NOT EXISTS password_salt VARCHAR(64)
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                ALTER TABLE accounts
+                ADD COLUMN IF NOT EXISTS role VARCHAR(32) NOT NULL DEFAULT 'user'
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                ALTER TABLE accounts
+                ALTER COLUMN password DROP NOT NULL
+                """
+            )
+        )
+        connection.execute(
+            text(
+                """
+                UPDATE accounts
+                SET role = 'user'
+                WHERE role IS NULL OR TRIM(role) = ''
                 """
             )
         )

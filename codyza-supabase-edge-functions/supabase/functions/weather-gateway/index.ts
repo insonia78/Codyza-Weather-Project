@@ -45,8 +45,8 @@ const weatherApiUrl =
 const jwtCreatorUrl = Deno.env.get("JWT_CREATOR_URL");
 const jwtValidatorUrl = Deno.env.get("JWT_VALIDATOR_URL");
 const gatewayInternalSecret = Deno.env.get("WEATHER_GATEWAY_INTERNAL_SECRET");
-const adminDashboardGatewaySecret = Deno.env.get("ADMIN_DASHBOARD_GATEWAY_SECRET");
 const CONTAINER_HOSTNAME = "host.docker.internal";
+const adminRole = "admin";
 
 type LogLevel = "info" | "warn" | "error";
 
@@ -135,7 +135,6 @@ function getConfiguredBackendsSummary() {
     hasJwtCreatorUrl: Boolean(jwtCreatorUrl),
     hasJwtRevokeUrl: Boolean(jwtRevokeUrl),
     hasGatewayInternalSecret: Boolean(gatewayInternalSecret),
-    hasAdminDashboardGatewaySecret: Boolean(adminDashboardGatewaySecret),
     registrationBackend: registrationApiUrl ? summarizeBackendUrl(registrationApiUrl) : null,
     weatherBackend: weatherApiUrl ? summarizeBackendUrl(weatherApiUrl) : null,
     jwtRevokeBackend: jwtRevokeUrl ? summarizeBackendUrl(jwtRevokeUrl) : null,
@@ -328,7 +327,7 @@ function buildProxyHeaders(
   service: SERVICES | null,
   verifiedToken: VerifiedToken | null,
 ) {
-  const headers = service === SERVICES.WEATHER && verifiedToken
+  const headers = (service === SERVICES.WEATHER || service === SERVICES.ADMIN) && verifiedToken
     ? buildWeatherForwardHeaders(req, verifiedToken.payload, verifiedToken.tokenType)
     : new Headers(req.headers);
 
@@ -344,7 +343,7 @@ function buildProxyHeaders(
     }
   }
 
-  if ((service === SERVICES.ACCOUNTS || service === SERVICES.AUTH) && gatewayInternalSecret) {
+  if ((service === SERVICES.ACCOUNTS || service === SERVICES.AUTH || service === SERVICES.ADMIN) && gatewayInternalSecret) {
     const gatewayHeaders = buildWeatherGatewayHeaders(gatewayInternalSecret);
     Object.entries(gatewayHeaders).forEach(([key, value]) => {
       headers.set(key, value);
@@ -354,22 +353,368 @@ function buildProxyHeaders(
   return headers;
 }
 
-function authorizeAdminDashboardRequest(req: Request, jsonResponse: typeof jsonResponse, requestId: string) {
-  if (!adminDashboardGatewaySecret) {
-    logGatewayEvent("error", "admin.authorization.misconfigured", { requestId });
-    return jsonResponse(500, {
-      error: "Missing ADMIN_DASHBOARD_GATEWAY_SECRET environment variable",
+function isAdminLoginPath(proxyPath: string) {
+  return proxyPath === "/admin/login";
+}
+
+function isAdminAccessPath(proxyPath: string) {
+  return proxyPath === "/admin/access";
+}
+
+function isAdminCreatePasswordPath(proxyPath: string) {
+  return proxyPath === "/admin/create-password";
+}
+
+function isAdminDashboardPath(proxyPath: string) {
+  return proxyPath === "/admin/dashboard";
+}
+
+function getRecordStringValue(record: Record<string, unknown>, key: string) {
+  const value = record[key];
+  return typeof value === "string" ? value.trim() : "";
+}
+
+function isAdminEmailRequestBody(value: unknown): value is { email: string } {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  return typeof record.email === "string";
+}
+
+function isAdminLoginRequestBody(value: unknown): value is { email: string; password: string } {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return false;
+  }
+
+  const record = value as Record<string, unknown>;
+  return typeof record.email === "string" && typeof record.password === "string";
+}
+
+function isAdminCreatePasswordRequestBody(value: unknown): value is { email: string; password: string } {
+  return isAdminLoginRequestBody(value);
+}
+
+async function parseJsonBodyFromBlob(requestBody: Blob | null) {
+  if (!requestBody) {
+    return null;
+  }
+
+  const text = await requestBody.text();
+  if (!text.trim()) {
+    return null;
+  }
+
+  return JSON.parse(text);
+}
+
+async function createJwtForIdentity(
+  req: Request,
+  identity: { userId: string; role: string },
+) {
+  if (!jwtCreatorUrl) {
+    throw new Error("Missing JWT_CREATOR_URL environment variable.");
+  }
+
+  if (!gatewayInternalSecret) {
+    throw new Error("Missing WEATHER_GATEWAY_INTERNAL_SECRET required for JWT creator forwarding.");
+  }
+
+  const jwtCreatorHeaders = new Headers({
+    "Content-Type": "application/json",
+  });
+  const apiKey = req.headers.get("apikey");
+  if (apiKey) {
+    jwtCreatorHeaders.set("apikey", apiKey);
+  }
+
+  const gatewayHeaders = buildWeatherGatewayHeaders(gatewayInternalSecret);
+  Object.entries(gatewayHeaders).forEach(([key, value]) => {
+    jwtCreatorHeaders.set(key, value);
+  });
+
+  const jwtResponse = await fetch(jwtCreatorUrl, {
+    method: "POST",
+    headers: jwtCreatorHeaders,
+    body: JSON.stringify(identity),
+  });
+
+  if (!jwtResponse.ok) {
+    throw new Error(`Failed to obtain JWT from JWT_CREATOR_URL: ${jwtResponse.status} ${jwtResponse.statusText}`);
+  }
+
+  const jwtPayload = await jwtResponse.json();
+  if (typeof jwtPayload !== "object" || jwtPayload === null || Array.isArray(jwtPayload)) {
+    throw new Error("JWT creator returned an invalid response payload.");
+  }
+
+  const token = getRecordStringValue(jwtPayload as Record<string, unknown>, "token");
+  if (!token) {
+    throw new Error("JWT creator response did not include a token.");
+  }
+
+  return jwtPayload as Record<string, unknown>;
+}
+
+function getAccountApiUrl(pathname: string) {
+  if (!registrationApiUrl) {
+    throw new Error("Missing WEATHER_REGISTRATION_API_URL environment variable.");
+  }
+
+  return new URL(pathname, registrationApiUrl.endsWith("/") ? registrationApiUrl : `${registrationApiUrl}/`);
+}
+
+async function fetchAccountApiResponse(
+  pathname: string,
+  body: Record<string, unknown>,
+) {
+  const headers = new Headers({
+    "Content-Type": "application/json",
+  });
+  if (gatewayInternalSecret) {
+    const gatewayHeaders = buildWeatherGatewayHeaders(gatewayInternalSecret);
+    Object.entries(gatewayHeaders).forEach(([key, value]) => {
+      headers.set(key, value);
+    });
+  }
+
+  const response = await fetch(getAccountApiUrl(pathname), {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+  });
+
+  let responseBody: unknown = null;
+  try {
+    responseBody = await response.json();
+  } catch {
+    responseBody = null;
+  }
+
+  return {
+    response,
+    body: responseBody,
+  };
+}
+
+function getAdminAccountResponseDetails(value: unknown) {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return null;
+  }
+
+  const record = value as Record<string, unknown>;
+  const email = getRecordStringValue(record, "email");
+  const role = getRecordStringValue(record, "role");
+  if (!email || !role) {
+    return null;
+  }
+
+  return {
+    email,
+    role,
+    passwordSetupRequired: Boolean(record.password_setup_required),
+  };
+}
+
+function ensureAdminAccount(details: { email: string; role: string }, req: Request) {
+  if (details.role !== adminRole) {
+    return jsonResponse(403, {
+      error: "Only administrator accounts can access the administration app",
     }, req);
   }
 
-  const providedSecret = req.headers.get("x-admin-dashboard-secret");
-  if (providedSecret !== adminDashboardGatewaySecret) {
-    logGatewayEvent("warn", "admin.authorization.failed", {
-      requestId,
-      hasProvidedSecret: Boolean(providedSecret),
-    });
+  return null;
+}
+
+async function buildAdminAccessResponse(
+  req: Request,
+  requestBody: Blob | null,
+) {
+  let parsedBody: unknown;
+  try {
+    parsedBody = await parseJsonBodyFromBlob(requestBody);
+  } catch {
+    return jsonResponse(400, {
+      error: "Request body must be valid JSON",
+    }, req);
+  }
+
+  if (!isAdminEmailRequestBody(parsedBody)) {
+    return jsonResponse(400, {
+      error: "Request body must include an email field",
+    }, req);
+  }
+
+  const email = parsedBody.email.trim();
+  if (!email) {
+    return jsonResponse(400, {
+      error: "Email is required",
+    }, req);
+  }
+
+  const { response, body } = await fetchAccountApiResponse("/accounts/access", { email });
+  if (!response.ok) {
+    return jsonResponse(response.status, body ?? { error: "Failed to read account access state" }, req);
+  }
+
+  const details = getAdminAccountResponseDetails(body);
+  if (!details) {
+    return jsonResponse(502, {
+      error: "Account access response payload is invalid",
+    }, req);
+  }
+
+  const adminError = ensureAdminAccount(details, req);
+  if (adminError) {
+    return adminError;
+  }
+
+  return jsonResponse(200, {
+    email: details.email,
+    role: details.role,
+    passwordSetupRequired: details.passwordSetupRequired,
+  }, req);
+}
+
+async function buildAdminLoginResponse(
+  req: Request,
+  requestBody: Blob | null,
+) {
+  let parsedBody: unknown;
+  try {
+    parsedBody = await parseJsonBodyFromBlob(requestBody);
+  } catch {
+    return jsonResponse(400, {
+      error: "Request body must be valid JSON",
+    }, req);
+  }
+
+  if (!isAdminLoginRequestBody(parsedBody)) {
+    return jsonResponse(400, {
+      error: "Request body must include string email and password fields",
+    }, req);
+  }
+
+  const email = parsedBody.email.trim();
+  const password = parsedBody.password;
+  if (!email || !password) {
+    return jsonResponse(400, {
+      error: "Email and password are required",
+    }, req);
+  }
+
+  const { response, body } = await fetchAccountApiResponse("/accounts/login", {
+    email,
+    password,
+  });
+  if (!response.ok) {
+    return jsonResponse(response.status, body ?? { error: "Failed to authenticate account" }, req);
+  }
+
+  const details = getAdminAccountResponseDetails(body);
+  if (!details) {
+    return jsonResponse(502, {
+      error: "Account login response payload is invalid",
+    }, req);
+  }
+
+  const adminError = ensureAdminAccount(details, req);
+  if (adminError) {
+    return adminError;
+  }
+
+  if (details.passwordSetupRequired) {
+    return jsonResponse(401, {
+      error: "Password setup is required for this account",
+      passwordSetupRequired: true,
+    }, req);
+  }
+
+  const jwtPayload = await createJwtForIdentity(req, {
+    userId: details.email,
+    role: details.role,
+  });
+
+  return jsonResponse(200, {
+    token: getRecordStringValue(jwtPayload, "token"),
+    tokenRecord: jwtPayload.tokenRecord ?? null,
+    userId: details.email,
+    role: details.role,
+  }, req);
+}
+
+async function buildAdminCreatePasswordResponse(
+  req: Request,
+  requestBody: Blob | null,
+) {
+  let parsedBody: unknown;
+  try {
+    parsedBody = await parseJsonBodyFromBlob(requestBody);
+  } catch {
+    return jsonResponse(400, {
+      error: "Request body must be valid JSON",
+    }, req);
+  }
+
+  if (!isAdminCreatePasswordRequestBody(parsedBody)) {
+    return jsonResponse(400, {
+      error: "Request body must include string email and password fields",
+    }, req);
+  }
+
+  const email = parsedBody.email.trim();
+  const password = parsedBody.password;
+  if (!email || !password) {
+    return jsonResponse(400, {
+      error: "Email and password are required",
+    }, req);
+  }
+
+  const { response, body } = await fetchAccountApiResponse("/accounts/password/setup", {
+    email,
+    password,
+  });
+  if (!response.ok) {
+    return jsonResponse(response.status, body ?? { error: "Failed to create account password" }, req);
+  }
+
+  const details = getAdminAccountResponseDetails(body);
+  if (!details) {
+    return jsonResponse(502, {
+      error: "Password setup response payload is invalid",
+    }, req);
+  }
+
+  const adminError = ensureAdminAccount(details, req);
+  if (adminError) {
+    return adminError;
+  }
+
+  const jwtPayload = await createJwtForIdentity(req, {
+    userId: details.email,
+    role: details.role,
+  });
+
+  return jsonResponse(200, {
+    token: getRecordStringValue(jwtPayload, "token"),
+    tokenRecord: jwtPayload.tokenRecord ?? null,
+    userId: details.email,
+    role: details.role,
+  }, req);
+}
+
+function authorizeAdminToken(
+  req: Request,
+  verifiedToken: VerifiedToken | null,
+) {
+  const role = verifiedToken?.payload && typeof verifiedToken.payload.role === "string"
+    ? verifiedToken.payload.role.trim()
+    : "";
+
+  if (role !== adminRole) {
     return jsonResponse(403, {
-      error: "Admin dashboard access is forbidden",
+      error: "Admin role is required for this route",
     }, req);
   }
 
@@ -488,39 +833,20 @@ async function appendTokenForAccountRoutes(
     return payload;
   }
 
-  if (!gatewayInternalSecret) {
-    throw new Error("Missing WEATHER_GATEWAY_INTERNAL_SECRET required for JWT creator forwarding.");
-  }
-
-  const jwtCreatorHeaders = new Headers(req.headers);
-  const gatewayHeaders = buildWeatherGatewayHeaders(gatewayInternalSecret);
-  Object.entries(gatewayHeaders).forEach(([key, value]) => {
-    jwtCreatorHeaders.set(key, value);
-  });
-
   const accountPayload = payload as Record<string, unknown>;
   const accountEmail = typeof accountPayload.email === "string" ? accountPayload.email.trim() : "";
+  const accountRole = getRecordStringValue(accountPayload, "role") || "user";
   if (!accountEmail) {
     return payload;
   }
 
-  const jwtResponse = await fetch(jwtCreatorUrl, {
-    method: "POST",
-    headers: jwtCreatorHeaders,
-    body: JSON.stringify({
-      userId: accountEmail,
-      email: accountEmail,
-    }),
+  const jwtPayload = await createJwtForIdentity(req, {
+    userId: accountEmail,
+    role: accountRole,
   });
-
-  if (!jwtResponse.ok) {
-    throw new Error(`Failed to obtain JWT from JWT_CREATOR_URL: ${jwtResponse.status} ${jwtResponse.statusText}`);
-  }
-
-  const jwtPayload = await jwtResponse.json();
   return {
     ...payload,
-    token: jwtPayload.token,
+    token: getRecordStringValue(jwtPayload, "token"),
   };
 }
 
@@ -615,14 +941,22 @@ export default {
         });
       }
 
-      if (service === SERVICES.ADMIN) {
-        const adminAuthorizationError = authorizeAdminDashboardRequest(req, jsonResponse, requestId);
-        if (adminAuthorizationError) {
-          return adminAuthorizationError;
-        }
+      if (service === SERVICES.ADMIN && isAdminAccessPath(proxyPath)) {
+        return await buildAdminAccessResponse(req, requestBody);
       }
 
-      if (service === SERVICES.WEATHER) {
+      if (service === SERVICES.ADMIN && isAdminLoginPath(proxyPath)) {
+        return await buildAdminLoginResponse(req, requestBody);
+      }
+
+      if (service === SERVICES.ADMIN && isAdminCreatePasswordPath(proxyPath)) {
+        return await buildAdminCreatePasswordResponse(req, requestBody);
+      }
+
+      if (
+        service === SERVICES.WEATHER ||
+        (service === SERVICES.ADMIN && isAdminDashboardPath(proxyPath))
+      ) {
         logGatewayEvent("info", "weather.validation.started", {
           requestId,
           proxyPath,
@@ -650,6 +984,17 @@ export default {
               verifiedToken.payload.sub.length > 0,
           ),
         });
+
+        if (service === SERVICES.ADMIN) {
+          const adminRoleError = authorizeAdminToken(req, verifiedToken);
+          if (adminRoleError) {
+            logGatewayEvent("warn", "admin.validation.failed", {
+              requestId,
+              proxyPath,
+            });
+            return adminRoleError;
+          }
+        }
       }
 
       const backendResponse = await fetchBackendResponse(

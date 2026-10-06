@@ -116,6 +116,13 @@ The API now includes a dedicated admin observability surface at `GET /admin/dash
 - runtime and database health
 
 Request logs are persisted to PostgreSQL by a dedicated admin module and middleware. Configure `WEATHER_OBSERVABILITY_DATABASE_URL`, or let it fall back to `WEATHER_SEARCH_HISTORY_DATABASE_URL` / `DATABASE_URL`.
+This endpoint now requires:
+
+- a JWT that was validated by the gateway
+- the `admin` role in the forwarded user payload
+- trusted gateway headers that match `WEATHER_GATEWAY_INTERNAL_SECRET`
+
+Set `WEATHER_GATEWAY_INTERNAL_SECRET` in the Nest environment to the same shared secret used by the Supabase `weather-gateway` function so the role guard can reject spoofed direct requests.
 
 ## Deployment
 

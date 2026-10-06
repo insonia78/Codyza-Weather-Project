@@ -135,13 +135,15 @@ Returns:
 
 #### `POST /accounts/login`
 
-Returns the matching account email as a single JSON object.
+Authenticates an existing account with email + password.
 
 Example response body:
 
 ```json
 {
-  "email": "user@example.com"
+  "email": "user@example.com",
+  "role": "user",
+  "password_setup_required": false
 }
 ```
 
@@ -151,6 +153,51 @@ Example request body:
 {
   "email": "user@example.com",
   "password": "password123"
+}
+```
+
+#### `POST /accounts/access`
+
+Returns whether an existing account already has a password set.
+
+Example request body:
+
+```json
+{
+  "email": "admin@example.com"
+}
+```
+
+Example response body:
+
+```json
+{
+  "email": "admin@example.com",
+  "role": "admin",
+  "password_setup_required": true
+}
+```
+
+#### `POST /accounts/password/setup`
+
+Creates the first password for an existing account whose password is currently empty.
+
+Example request body:
+
+```json
+{
+  "email": "admin@example.com",
+  "password": "password123"
+}
+```
+
+Example response body:
+
+```json
+{
+  "email": "admin@example.com",
+  "role": "admin",
+  "password_setup_required": false
 }
 ```
 
@@ -172,7 +219,8 @@ Example response body:
 ```json
 {
   "id": 1,
-  "email": "user@example.com"
+  "email": "user@example.com",
+  "role": "user"
 }
 ```
 
@@ -213,8 +261,9 @@ The current account model includes:
 
 - `id: int`
 - `email: valid email address`
-- `password: string with minimum length of 8 characters`
+- `password: nullable string hash; first-time admin bootstrap accounts can exist without a password until they create one`
 - `password_salt: stored server-side salt used to derive the password hash`
+- `role: either user or admin`
 
 ## Notes
 

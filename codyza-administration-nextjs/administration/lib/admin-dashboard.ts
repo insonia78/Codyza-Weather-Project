@@ -50,27 +50,30 @@ export type AdminDashboard = {
   };
 };
 
-export async function getAdminDashboard(): Promise<{ data: AdminDashboard | null; error: string | null }> {
+export async function getAdminDashboard(token: string): Promise<{ data: AdminDashboard | null; error: string | null }> {
   const gatewayBaseUrl = process.env.ADMIN_GATEWAY_BASE_URL?.trim() || "http://localhost:54321/functions/v1/weather-gateway";
-  const gatewaySecret = process.env.ADMIN_DASHBOARD_GATEWAY_SECRET?.trim() || "";
   const gatewayApiKey = process.env.ADMIN_GATEWAY_API_KEY?.trim() || "";
   const dashboardUrl = `${gatewayBaseUrl.replace(/\/+$/, "")}/admin/dashboard`;
 
-  if (!gatewaySecret) {
+  if (!token) {
     return {
       data: null,
-      error: "Missing ADMIN_DASHBOARD_GATEWAY_SECRET environment variable.",
+      error: "Missing admin session token.",
+    };
+  }
+
+  if (!gatewayApiKey) {
+    return {
+      data: null,
+      error: "Missing ADMIN_GATEWAY_API_KEY environment variable.",
     };
   }
 
   try {
     const headers = new Headers({
-      "x-admin-dashboard-secret": gatewaySecret,
+      Authorization: `Bearer ${token}`,
+      apikey: gatewayApiKey,
     });
-
-    if (gatewayApiKey) {
-      headers.set("apikey", gatewayApiKey);
-    }
 
     const response = await fetch(dashboardUrl, {
       cache: "no-store",

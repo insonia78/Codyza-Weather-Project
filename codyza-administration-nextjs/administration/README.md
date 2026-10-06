@@ -19,6 +19,8 @@ Open [http://localhost:3000](http://localhost:3000) with your browser to see the
 The admin UI is served from:
 
 - [app/page.tsx](./app/page.tsx)
+- [app/login/page.tsx](./app/login/page.tsx)
+- [app/create-password/page.tsx](./app/create-password/page.tsx)
 
 The App Router admin API route is served from:
 
@@ -26,20 +28,44 @@ The App Router admin API route is served from:
 
 The route handler proxies server-side requests through the Supabase `weather-gateway` function before the request reaches the Nest admin endpoint.
 
+Authentication for the admin UI is handled by:
+
+- [app/api/auth/access/route.ts](./app/api/auth/access/route.ts)
+- [app/api/auth/create-password/route.ts](./app/api/auth/create-password/route.ts)
+- [app/api/auth/login/route.ts](./app/api/auth/login/route.ts)
+- [app/api/auth/logout/route.ts](./app/api/auth/logout/route.ts)
+
+## Admin bootstrap and login flow
+
+The admin login flow is email-first:
+
+1. enter the administrator email that already exists in the accounts database
+2. the app checks whether that account already has a password
+3. if no password exists, the app redirects to `/create-password`
+4. if a password exists, the app prompts for it on `/login`
+5. successful login or first-time password creation returns a JWT from the shared token service, stores it in an HttpOnly session cookie, and uses that token for protected admin requests through the gateway
+
+Both the App Router page (`/`) and the App Route (`/api/admin/dashboard`) are protected by [proxy.ts](./proxy.ts), which requires a valid admin JWT session cookie and redirects unauthenticated browser requests to `/login`.
+
+The App Route fetches dashboard data through the Supabase `weather-gateway` function with:
+
+```http
+Authorization: Bearer <token>
+apikey: <ADMIN_GATEWAY_API_KEY>
+```
+
+The administrator account is not configured through gateway environment variables. Instead, the account must already exist in the registration database with `role=admin`. If that database record has no password yet, the admin app uses the `/create-password` bootstrap flow.
+
+## Configuration
+
 Create a `.env.local` file when running this app outside local defaults:
 
 ```bash
 ADMIN_GATEWAY_BASE_URL=http://localhost:54321/functions/v1/weather-gateway
 ADMIN_GATEWAY_API_KEY=
-ADMIN_DASHBOARD_GATEWAY_SECRET=replace-with-the-shared-gateway-secret
-ADMIN_USERNAME=admin
-ADMIN_PASSWORD=replace-with-a-strong-password
 ```
 
 You can start from [`.env.local.example`](./.env.local.example) and copy it to `.env.local`.
-
-Both the App Router page (`/`) and the App Route (`/api/admin/dashboard`) are protected by Next middleware using HTTP Basic authentication.
-The App Route then fetches the admin dashboard data through the Supabase `weather-gateway` function, which validates `ADMIN_DASHBOARD_GATEWAY_SECRET` before proxying to the Nest admin API.
 
 ## Available functionality
 
@@ -62,5 +88,5 @@ To learn more about Next.js App Router and route handlers:
 Deploy this app alongside the Nest API and configure:
 
 - `ADMIN_GATEWAY_BASE_URL` to the live `weather-gateway` function URL
-- `ADMIN_DASHBOARD_GATEWAY_SECRET` to the same shared secret configured in [supabase/functions/.env](../codyza-supabase-edge-functions/supabase/functions/.env)
-- `ADMIN_USERNAME` / `ADMIN_PASSWORD` for the Next.js admin Basic auth gate
+- `ADMIN_GATEWAY_API_KEY` to a key that can call the live `weather-gateway` function
+- an administrator account record in the registration database with `role=admin`

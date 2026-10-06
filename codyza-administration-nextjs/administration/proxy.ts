@@ -1,33 +1,35 @@
 import { NextResponse, type NextRequest } from "next/server";
 
 import {
-  getAdminAuthChallengeHeader,
-  isAdminAuthConfigured,
-  isAuthorizedAdminRequest,
-} from "./lib/admin-auth";
+  clearAdminSessionCookie,
+  getAdminSessionFromRequest,
+  isAdminSessionAuthorized,
+} from "./lib/admin-session";
 
 export function proxy(request: NextRequest) {
-  if (!isAdminAuthConfigured()) {
-    return new NextResponse("Missing ADMIN_USERNAME or ADMIN_PASSWORD environment variable.", {
-      status: 503,
-      headers: {
-        "Content-Type": "text/plain; charset=utf-8",
-      },
-    });
-  }
+  const session = getAdminSessionFromRequest(request);
 
-  const authorizationHeader = request.headers.get("authorization");
-  if (isAuthorizedAdminRequest(authorizationHeader)) {
+  if (isAdminSessionAuthorized(session)) {
     return NextResponse.next();
   }
 
-  return new NextResponse("Authentication required.", {
-    status: 401,
-    headers: {
-      "Content-Type": "text/plain; charset=utf-8",
-      "WWW-Authenticate": getAdminAuthChallengeHeader(),
-    },
-  });
+  if (request.nextUrl.pathname.startsWith("/api/admin/")) {
+    const response = NextResponse.json(
+      { error: "Authentication required." },
+      { status: 401 },
+    );
+    clearAdminSessionCookie(response);
+    return response;
+  }
+
+  const loginUrl = new URL("/login", request.url);
+  if (request.nextUrl.pathname !== "/") {
+    loginUrl.searchParams.set("returnTo", request.nextUrl.pathname);
+  }
+
+  const response = NextResponse.redirect(loginUrl);
+  clearAdminSessionCookie(response);
+  return response;
 }
 
 export const config = {

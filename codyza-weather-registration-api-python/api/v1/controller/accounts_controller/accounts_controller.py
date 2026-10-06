@@ -1,17 +1,44 @@
 from fastapi import HTTPException, status
+from sqlmodel import select
+
 from controller.accounts_controller.models.models import (
     Account,
     AccountBase,
-    AccountEmailPublic,
+    AccountEmailLookup,
+    AccountLoginPublic,
+    AccountPasswordSetup,
     AccountPublic,
     AccountUpdate,
 )
 from controller.accounts_controller.passwords import create_password_hash, verify_password
-from sqlmodel import select
 from database.postgres import SessionDep
 
 
-def get_account(body: AccountBase, session: SessionDep) -> AccountEmailPublic:
+def get_account_access(body: AccountEmailLookup, session: SessionDep) -> AccountLoginPublic:
+    try:
+        statement = select(Account).where(Account.email == body.email)
+        account = session.exec(statement).first()
+        if not account:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Account not found",
+            )
+
+        return AccountLoginPublic(
+            email=account.email,
+            role=account.role,
+            password_setup_required=not account.password,
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to read account access state",
+        ) from exc
+
+
+def get_account(body: AccountBase, session: SessionDep) -> AccountLoginPublic:
     try:
         statement = select(Account).where(Account.email == body.email)
         account = session.exec(statement).first()
@@ -27,7 +54,11 @@ def get_account(body: AccountBase, session: SessionDep) -> AccountEmailPublic:
             session.commit()
             session.refresh(account)
 
-        return AccountEmailPublic(email=account.email)
+        return AccountLoginPublic(
+            email=account.email,
+            role=account.role,
+            password_setup_required=False,
+        )
     except HTTPException:
         raise
     except Exception as exc:
@@ -37,11 +68,45 @@ def get_account(body: AccountBase, session: SessionDep) -> AccountEmailPublic:
         ) from exc
 
 
+def create_account_password(body: AccountPasswordSetup, session: SessionDep) -> AccountLoginPublic:
+    try:
+        statement = select(Account).where(Account.email == body.email)
+        account = session.exec(statement).first()
+        if not account:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Account not found",
+            )
+
+        if account.password:
+            raise HTTPException(
+                status_code=status.HTTP_409_CONFLICT,
+                detail="Account password already exists",
+            )
+
+        account.password, account.password_salt = create_password_hash(body.password)
+        session.add(account)
+        session.commit()
+        session.refresh(account)
+
+        return AccountLoginPublic(
+            email=account.email,
+            role=account.role,
+            password_setup_required=False,
+        )
+    except HTTPException:
+        raise
+    except Exception as exc:
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="Failed to create account password",
+        ) from exc
+
 
 async def create_account(body: AccountBase, session: SessionDep) -> AccountPublic:
     try:
         existing_account = session.exec(
-            select(Account).where(Account.email == body.email)
+            select(Account).where(Account.email == body.email),
         ).first()
         if existing_account:
             raise HTTPException(
@@ -50,7 +115,12 @@ async def create_account(body: AccountBase, session: SessionDep) -> AccountPubli
             )
 
         password_hash, password_salt = create_password_hash(body.password)
-        account = Account(email=body.email, password=password_hash, password_salt=password_salt)
+        account = Account(
+            email=body.email,
+            password=password_hash,
+            password_salt=password_salt,
+            role="user",
+        )
 
         session.add(account)
         session.commit()

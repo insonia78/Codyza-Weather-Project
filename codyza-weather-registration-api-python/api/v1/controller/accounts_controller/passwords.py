@@ -21,7 +21,10 @@ def create_password_hash(password: str) -> tuple[str, str]:
     return hash_password(password, password_salt), password_salt
 
 
-def verify_password(password: str, stored_password: str, password_salt: str | None) -> bool:
+def verify_password(password: str, stored_password: str | None, password_salt: str | None) -> bool:
+    if not stored_password:
+        return False
+
     if not password_salt:
         return secrets.compare_digest(stored_password, password)
 

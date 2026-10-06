@@ -1,6 +1,8 @@
 export const dynamic = "force-dynamic";
 
 import { getAdminDashboard } from "../lib/admin-dashboard";
+import { getAdminSessionFromCookies } from "../lib/admin-session";
+import { LogoutButton } from "./logout-button";
 
 function formatDateTime(value: string | null): string {
   if (!value) {
@@ -30,7 +32,9 @@ function formatBytes(value: number): string {
 }
 
 export default async function Home() {
-  const { data, error } = await getAdminDashboard();
+  const session = await getAdminSessionFromCookies();
+  const { data, error } = await getAdminDashboard(session?.token ?? "");
+  const signedInAs = session?.payload.sub || session?.payload.userId || "Administrator";
 
   return (
     <main className="admin-shell">
@@ -43,10 +47,12 @@ export default async function Home() {
           </p>
         </div>
         <div className="admin-hero__meta">
+          <span className="admin-user-chip">Signed in as {signedInAs}</span>
           <span className={`status-pill ${data?.systemHealth.status === "ok" ? "status-pill--ok" : "status-pill--warn"}`}>
             {data?.systemHealth.status === "ok" ? "System healthy" : "Attention needed"}
           </span>
           <span className="admin-subtext">Last request: {formatDateTime(data?.totals.lastRequestAt ?? null)}</span>
+          <LogoutButton />
         </div>
       </section>
 
@@ -55,7 +61,7 @@ export default async function Home() {
           <h2>Admin API unavailable</h2>
           <p>{error}</p>
           <p className="admin-subtext">
-            Set <code>ADMIN_API_BASE_URL</code> in the admin app environment to your Nest admin endpoint.
+            Set <code>ADMIN_GATEWAY_BASE_URL</code> and <code>ADMIN_GATEWAY_API_KEY</code> in the admin app environment so the dashboard can fetch data through the weather gateway.
           </p>
         </section>
       ) : null}

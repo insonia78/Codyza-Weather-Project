@@ -1,11 +1,20 @@
 import { NextResponse } from "next/server";
 
 import { getAdminDashboard } from "../../../../lib/admin-dashboard";
+import { getAdminSessionFromCookies, isAdminSessionAuthorized } from "../../../../lib/admin-session";
 
 export const dynamic = "force-dynamic";
 
 export async function GET() {
-  const result = await getAdminDashboard();
+  const session = await getAdminSessionFromCookies();
+  if (!session || !isAdminSessionAuthorized(session)) {
+    return NextResponse.json(
+      { error: "Authentication required." },
+      { status: 401 },
+    );
+  }
+
+  const result = await getAdminDashboard(session.token);
 
   if (result.error) {
     return NextResponse.json(
