@@ -89,6 +89,29 @@ class CreateAccountTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(account.role, "admin")
         self.assertTrue(account.password_setup_required)
 
+    def test_get_account_access_defaults_legacy_missing_role_to_user(self) -> None:
+        existing_account = Account(
+            id=8,
+            email="legacy@example.com",
+            password="stored-password-hash",
+            password_salt="stored-salt",
+            role="",
+        )
+        exec_result = Mock()
+        exec_result.first.return_value = existing_account
+
+        session = Mock()
+        session.exec.return_value = exec_result
+
+        account = get_account_access(
+            AccountEmailLookup(email="legacy@example.com"),
+            session,
+        )
+
+        self.assertEqual(account.role, "user")
+        self.assertEqual(session.add.call_args.args[0].role, "user")
+        session.commit.assert_called_once()
+
     def test_create_account_password_rejects_existing_password(self) -> None:
         existing_account = Account(
             id=7,

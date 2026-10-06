@@ -14,6 +14,18 @@ from controller.accounts_controller.passwords import create_password_hash, verif
 from database.postgres import SessionDep
 
 
+def normalize_account_role(account: Account, session: SessionDep) -> str:
+    role = (account.role or "").strip().lower()
+    if role in {"user", "admin"}:
+        return role
+
+    account.role = "user"
+    session.add(account)
+    session.commit()
+    session.refresh(account)
+    return "user"
+
+
 def get_account_access(body: AccountEmailLookup, session: SessionDep) -> AccountLoginPublic:
     try:
         statement = select(Account).where(Account.email == body.email)
@@ -24,9 +36,10 @@ def get_account_access(body: AccountEmailLookup, session: SessionDep) -> Account
                 detail="Account not found",
             )
 
+        role = normalize_account_role(account, session)
         return AccountLoginPublic(
             email=account.email,
-            role=account.role,
+            role=role,
             password_setup_required=not account.password,
         )
     except HTTPException:
@@ -48,6 +61,7 @@ def get_account(body: AccountBase, session: SessionDep) -> AccountLoginPublic:
                 detail="Account not found",
             )
 
+        role = normalize_account_role(account, session)
         if account.password_salt is None:
             account.password, account.password_salt = create_password_hash(body.password)
             session.add(account)
@@ -56,7 +70,7 @@ def get_account(body: AccountBase, session: SessionDep) -> AccountLoginPublic:
 
         return AccountLoginPublic(
             email=account.email,
-            role=account.role,
+            role=role,
             password_setup_required=False,
         )
     except HTTPException:
@@ -84,6 +98,7 @@ def create_account_password(body: AccountPasswordSetup, session: SessionDep) -> 
                 detail="Account password already exists",
             )
 
+        role = normalize_account_role(account, session)
         account.password, account.password_salt = create_password_hash(body.password)
         session.add(account)
         session.commit()
@@ -91,7 +106,7 @@ def create_account_password(body: AccountPasswordSetup, session: SessionDep) -> 
 
         return AccountLoginPublic(
             email=account.email,
-            role=account.role,
+            role=role,
             password_setup_required=False,
         )
     except HTTPException:

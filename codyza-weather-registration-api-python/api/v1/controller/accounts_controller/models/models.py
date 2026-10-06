@@ -23,7 +23,7 @@ class Account(SQLModel, table=True):
     email: EmailStr = Field()
     password: str | None = Field(default=None)
     password_salt: str | None = Field(default=None)
-    role: AccountRole = Field(default="user")
+    role: str = Field(default="user")
 
 
 class AccountPublic(SQLModel):
