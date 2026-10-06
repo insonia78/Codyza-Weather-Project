@@ -6,7 +6,10 @@ import type { AdminDashboard, AdminDashboardStreamPayload } from "../../lib/admi
 import { LogoutButton } from "../logout-button";
 import { CodyzaBranding } from "./branding";
 
-type StreamStatus = "connecting" | "live" | "reconnecting";
+type StreamStatus = "connecting" | "live" | "reconnecting" | "polling";
+
+const STREAM_STALE_AFTER_MS = 10_000;
+const POLLING_INTERVAL_MS = 5_000;
 
 function formatDateTime(value: string | null): string {
   if (!value) {
@@ -48,9 +51,79 @@ export function AdminDashboardLive({
   const [error, setError] = useState<string | null>(initialError);
   const [streamStatus, setStreamStatus] = useState<StreamStatus>("connecting");
   const [lastUpdatedAt, setLastUpdatedAt] = useState<string | null>(null);
+  const [liveUpdatesEnabled, setLiveUpdatesEnabled] = useState(false);
+  const [liveActivationCount, setLiveActivationCount] = useState(0);
 
   useEffect(() => {
-    const eventSource = new EventSource("/api/admin/dashboard/stream");
+    if (!liveUpdatesEnabled) {
+      return;
+    }
+
+    let eventSource: EventSource | null = null;
+    let pollingIntervalId: ReturnType<typeof setInterval> | null = null;
+    let staleTimerId: ReturnType<typeof setTimeout> | null = null;
+    let cancelled = false;
+
+    async function refreshDashboardSnapshot() {
+      try {
+        const response = await fetch("/api/admin/dashboard", {
+          cache: "no-store",
+          method: "GET",
+        });
+        const payload = await response.json().catch(() => null) as AdminDashboard | { error?: string } | null;
+
+        if (!response.ok) {
+          const nextError = payload && "error" in payload && typeof payload.error === "string"
+            ? payload.error
+            : `Admin dashboard refresh failed (${response.status}).`;
+          throw new Error(nextError);
+        }
+
+        if (cancelled) {
+          return;
+        }
+
+        setData(payload as AdminDashboard);
+        setError(null);
+        setLastUpdatedAt(new Date().toISOString());
+        setStreamStatus("polling");
+      } catch (refreshError) {
+        if (!cancelled) {
+          setError(refreshError instanceof Error ? refreshError.message : "Admin dashboard refresh failed.");
+        }
+      }
+    }
+
+    function stopPolling() {
+      if (pollingIntervalId) {
+        clearInterval(pollingIntervalId);
+        pollingIntervalId = null;
+      }
+    }
+
+    function ensurePollingFallback() {
+      if (pollingIntervalId) {
+        return;
+      }
+
+      setStreamStatus("polling");
+      void refreshDashboardSnapshot();
+      pollingIntervalId = setInterval(() => {
+        void refreshDashboardSnapshot();
+      }, POLLING_INTERVAL_MS);
+    }
+
+    function resetStaleTimer() {
+      if (staleTimerId) {
+        clearTimeout(staleTimerId);
+      }
+
+      staleTimerId = setTimeout(() => {
+        ensurePollingFallback();
+      }, STREAM_STALE_AFTER_MS);
+    }
+
+    eventSource = new EventSource("/api/admin/dashboard/stream");
 
     function handleDashboardEvent(event: Event) {
       const messageEvent = event as MessageEvent<string>;
@@ -61,6 +134,8 @@ export function AdminDashboardLive({
         setError(null);
         setLastUpdatedAt(payload.generatedAt);
         setStreamStatus("live");
+        stopPolling();
+        resetStaleTimer();
       } catch (streamError) {
         setError(streamError instanceof Error ? streamError.message : "Admin realtime payload could not be parsed.");
       }
@@ -85,22 +160,37 @@ export function AdminDashboardLive({
     eventSource.addEventListener("dashboard", handleDashboardEvent);
     eventSource.addEventListener("dashboard-error", handleErrorEvent);
     eventSource.onopen = () => {
-      setStreamStatus("live");
+      setStreamStatus((currentStatus) => currentStatus === "polling" ? "polling" : "connecting");
+      resetStaleTimer();
     };
     eventSource.onerror = () => {
-      setStreamStatus((currentStatus) => currentStatus === "live" ? "reconnecting" : "connecting");
+      setStreamStatus((currentStatus) => currentStatus === "polling" ? "polling" : currentStatus === "live" ? "reconnecting" : "connecting");
+      ensurePollingFallback();
     };
 
     return () => {
-      eventSource.removeEventListener("dashboard", handleDashboardEvent);
-      eventSource.removeEventListener("dashboard-error", handleErrorEvent);
-      eventSource.close();
+      cancelled = true;
+      if (staleTimerId) {
+        clearTimeout(staleTimerId);
+      }
+      stopPolling();
+      eventSource?.removeEventListener("dashboard", handleDashboardEvent);
+      eventSource?.removeEventListener("dashboard-error", handleErrorEvent);
+      eventSource?.close();
     };
-  }, []);
+  }, [liveUpdatesEnabled, liveActivationCount]);
 
   const connectionLabel = useMemo(() => {
+    if (!liveUpdatesEnabled) {
+      return "Live updates off";
+    }
+
     if (streamStatus === "live") {
       return "Realtime via gateway";
+    }
+
+    if (streamStatus === "polling") {
+      return "Live polling fallback via gateway";
     }
 
     if (streamStatus === "reconnecting") {
@@ -108,7 +198,15 @@ export function AdminDashboardLive({
     }
 
     return "Connecting to gateway";
-  }, [streamStatus]);
+  }, [liveUpdatesEnabled, streamStatus]);
+
+  function activateLiveUpdates() {
+    setError(null);
+    setStreamStatus("connecting");
+    setLastUpdatedAt(null);
+    setLiveUpdatesEnabled(true);
+    setLiveActivationCount((currentCount) => currentCount + 1);
+  }
 
   return (
     <main className="admin-shell">
@@ -133,6 +231,13 @@ export function AdminDashboardLive({
           <span className={`status-pill ${streamStatus === "live" ? "status-pill--ok" : "status-pill--warn"}`}>
             {connectionLabel}
           </span>
+          <button
+            className="admin-button admin-button--primary"
+            type="button"
+            onClick={activateLiveUpdates}
+          >
+            {liveUpdatesEnabled ? "Restart live updates" : "Activate live updates"}
+          </button>
           <span className="admin-subtext">Last request: {formatDateTime(data?.totals.lastRequestAt ?? null)}</span>
           <span className="admin-subtext">Last stream update: {formatDateTime(lastUpdatedAt)}</span>
           <LogoutButton />
