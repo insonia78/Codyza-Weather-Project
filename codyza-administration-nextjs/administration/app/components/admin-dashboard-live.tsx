@@ -208,6 +208,10 @@ export function AdminDashboardLive({
     setLiveActivationCount((currentCount) => currentCount + 1);
   }
 
+  function stopLiveUpdates() {
+    setLiveUpdatesEnabled(false);
+  }
+
   return (
     <main className="admin-shell">
       <section className="admin-hero">
@@ -231,13 +235,23 @@ export function AdminDashboardLive({
           <span className={`status-pill ${streamStatus === "live" ? "status-pill--ok" : "status-pill--warn"}`}>
             {connectionLabel}
           </span>
-          <button
-            className="admin-button admin-button--primary"
-            type="button"
-            onClick={activateLiveUpdates}
-          >
-            {liveUpdatesEnabled ? "Restart live updates" : "Activate live updates"}
-          </button>
+          <div className="admin-actions">
+            <button
+              className="admin-button admin-button--primary"
+              type="button"
+              onClick={activateLiveUpdates}
+            >
+              {liveUpdatesEnabled ? "Restart live updates" : "Activate live updates"}
+            </button>
+            <button
+              className="admin-button admin-button--secondary"
+              type="button"
+              onClick={stopLiveUpdates}
+              disabled={!liveUpdatesEnabled}
+            >
+              Stop live updates
+            </button>
+          </div>
           <span className="admin-subtext">Last request: {formatDateTime(data?.totals.lastRequestAt ?? null)}</span>
           <span className="admin-subtext">Last stream update: {formatDateTime(lastUpdatedAt)}</span>
           <LogoutButton />
@@ -419,7 +433,7 @@ export function AdminDashboardLive({
         <section className="panel">
           <h2>Waiting for realtime admin data</h2>
           <p className="admin-subtext">
-            The dashboard is connected through the gateway and will populate as soon as the live admin stream returns its first snapshot.
+            Activate live updates to connect through the gateway and populate the dashboard with the first admin stream snapshot.
           </p>
         </section>
       )}

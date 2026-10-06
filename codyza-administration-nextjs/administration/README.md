@@ -71,6 +71,7 @@ Create a `.env.local` file when running this app outside local defaults:
 ```bash
 ADMIN_GATEWAY_BASE_URL=http://localhost:54321/functions/v1/weather-gateway
 ADMIN_GATEWAY_API_KEY=
+NEXT_PUBLIC_ROOT_APP_URL=https://codyza-weather-project-17oc.vercel.app
 ```
 
 You can start from [`.env.local.example`](./.env.local.example) and copy it to `.env.local`.
@@ -83,7 +84,7 @@ You can start from [`.env.local.example`](./.env.local.example) and copy it to `
 - active user count
 - cache performance metrics
 - runtime and database health overview
-- real-time dashboard streaming through the gateway
+- real-time dashboard streaming through the gateway with manual activate, restart, and stop controls
 
 ## Learn More
 
