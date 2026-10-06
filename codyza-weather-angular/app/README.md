@@ -4,6 +4,7 @@ Codyza Weather is an Angular frontend backed by a NestJS API. The Nest service p
 
 - location search for cities, addresses, ZIP/postal codes, and coordinates
 - current conditions, hourly forecast, daily outlooks, 24-hour conditions history, and recent hourly history
+- severe weather alerts, air-quality cards, and weather overlay layers streamed from the backend
 - geolocation, favorites, recent searches, multi-city comparison, caching, rate limiting, and automatic refresh
 - an interactive Google map for selecting locations and visualizing saved places
 - Codyza branding with a logo, About Codyza section, Visit Codyza action, and Powered by Codyza footer treatment
@@ -28,6 +29,7 @@ npm run start:dev
 ```
 
 Set `GOOGLE_WEATHER_API_KEY` in `backend\.env`.
+Set `OPENWEATHER_API_KEY` in `backend\.env` if you want live severe weather alerts, air-quality data, and weather-map overlays enabled in the Angular UI.
 
 ## Frontend setup
 
@@ -56,6 +58,8 @@ googleWeather: {
 ```
 
 Without a browser key, the weather features still work through Nest, but the embedded Google map is intentionally disabled.
+
+When the backend has `OPENWEATHER_API_KEY`, the map layer picker uses the Nest tile proxy at `/api/weather/map-layers/:layer/:z/:x/:y` so browser clients never receive the private provider key directly.
 
 ## Development server
 

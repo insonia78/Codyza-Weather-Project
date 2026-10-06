@@ -141,3 +141,70 @@
   color: #7dd3fc;
   text-decoration: none;
 }
+
+.insight-grid {
+  display: grid;
+  gap: 24px;
+  grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+}
+
+.alert-list {
+  display: grid;
+  gap: 16px;
+}
+
+.alert-card {
+  display: grid;
+  gap: 12px;
+  padding: 18px;
+  border-radius: 18px;
+  border: 1px solid rgba(248, 113, 113, 0.22);
+  background: rgba(127, 29, 29, 0.16);
+}
+
+.alert-card__header,
+.alert-card__meta,
+.tag-list,
+.aqi-components {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.alert-card__header {
+  justify-content: space-between;
+  align-items: baseline;
+}
+
+.alert-card__meta {
+  color: var(--text-secondary);
+  font-size: 0.95rem;
+}
+
+.tag-pill {
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(248, 250, 252, 0.08);
+  color: var(--text-primary);
+  font-size: 0.85rem;
+}
+
+.aqi-summary {
+  display: grid;
+  gap: 18px;
+}
+
+.aqi-summary__score {
+  display: inline-grid;
+  justify-items: start;
+  gap: 6px;
+  padding: 18px;
+  border-radius: 18px;
+  background: rgba(56, 189, 248, 0.12);
+  border: 1px solid rgba(56, 189, 248, 0.18);
+}
+
+.aqi-summary__score strong {
+  font-size: clamp(2rem, 3vw, 2.75rem);
+  color: var(--text-primary);
+}

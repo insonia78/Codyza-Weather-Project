@@ -13,8 +13,10 @@ import {
   DashboardRequestBody,
   HistoricalSummary,
   HourlyForecastPoint,
+  WeatherAlert,
   WeatherDashboard,
-  WeatherLocation
+  WeatherLocation,
+  WeatherMapLayerKey,
 } from './weather.models.js';
 
 interface OptionalRequestResult<T> {
@@ -185,9 +187,37 @@ interface GoogleWeatherDailyResponse {
 }
 
 interface ProviderErrorPayload {
+  message?: string;
   error?: {
     message?: string;
   };
+}
+
+interface OpenWeatherAlert {
+  sender_name?: string;
+  event?: string;
+  start?: number;
+  end?: number;
+  description?: string;
+  tags?: string[];
+}
+
+interface OpenWeatherOneCallResponse {
+  alerts?: OpenWeatherAlert[];
+}
+
+interface OpenWeatherAirPollutionResponse {
+  list?: Array<{
+    main?: {
+      aqi?: number;
+    };
+    components?: Record<string, number>;
+  }>;
+}
+
+interface BinaryResponse {
+  contentType: string;
+  body: Buffer;
 }
 
 @Injectable()
@@ -196,7 +226,8 @@ export class WeatherProviderService {
 
   private readonly cacheManager: Cache = createCache();
   private readonly pendingRequests = new Map<string, Promise<unknown>>();
-  private readonly requestTimestamps: number[] = [];
+  private readonly googleRequestTimestamps: number[] = [];
+  private readonly supplementalRequestTimestamps: number[] = [];
 
   constructor(private readonly cacheMetricsService: CacheMetricsService) {}
 
@@ -266,8 +297,9 @@ export class WeatherProviderService {
 
     const forceRefresh = Boolean(request.forceRefresh);
     const coordinateKey = `${request.location.lat.toFixed(3)}:${request.location.lon.toFixed(3)}`;
+    const warnings: string[] = [];
 
-    const [current, hourly, daily, history] = await Promise.all([
+    const [current, hourly, daily, history, alerts, airQuality] = await Promise.all([
       this.request<GoogleWeatherCurrentResponse>(
         this.buildCurrentConditionsUrl(request.location),
         `current:${coordinateKey}`,
@@ -292,10 +324,31 @@ export class WeatherProviderService {
         60 * 60 * 1000,
         'Hourly history',
         forceRefresh,
-      )
+      ),
+      this.openWeatherApiKey
+        ? this.optionalSupplementalRequest<OpenWeatherOneCallResponse>(
+            this.buildOpenWeatherAlertsUrl(request.location),
+            `openweather-alerts:${coordinateKey}`,
+            10 * 60 * 1000,
+            'Severe weather alerts',
+            forceRefresh,
+          )
+        : Promise.resolve({
+            data: null,
+            warning: 'Set OPENWEATHER_API_KEY to enable severe weather alerts, air-quality data, and weather-map layers.',
+          }),
+      this.openWeatherApiKey
+        ? this.optionalSupplementalRequest<OpenWeatherAirPollutionResponse>(
+            this.buildOpenWeatherAirQualityUrl(request.location),
+            `openweather-air-quality:${coordinateKey}`,
+            15 * 60 * 1000,
+            'Air-quality data',
+            forceRefresh,
+          )
+        : Promise.resolve({ data: null, warning: null }),
     ]);
 
-    const warnings = [history.warning].filter((warning): warning is string => Boolean(warning));
+    warnings.push(...[history.warning, alerts.warning, airQuality.warning].filter((warning): warning is string => Boolean(warning)));
     const firstDailyPoint = daily.forecastDays[0];
     const currentTime = this.isoToUnixSeconds(current.currentTime);
     const timeZone = current.timeZone.id || hourly.timeZone.id || daily.timeZone.id || 'UTC';
@@ -308,13 +361,32 @@ export class WeatherProviderService {
       currentHistory: this.mapCurrentConditionsHistory(current.currentConditionsHistory),
       hourly: (hourly.forecastHours || []).slice(0, this.forecastHours).map((point) => this.mapHourlyPoint(point)),
       daily: daily.forecastDays.slice(0, this.forecastDays).map((point) => this.mapDailyPoint(point)),
-      alerts: [],
-      airQuality: null,
+      alerts: this.mapOpenWeatherAlerts(alerts.data),
+      airQuality: this.mapAirQuality(airQuality.data),
       historical: history.data ? this.mapHistorical(history.data) : null,
       warnings,
       providerForecastDays: Math.min(daily.forecastDays.length, this.forecastDays),
       fetchedAt: Date.now()
     };
+  }
+
+  async getMapLayerTile(
+    layer: WeatherMapLayerKey,
+    z: number,
+    x: number,
+    y: number,
+  ): Promise<BinaryResponse> {
+    if (!this.openWeatherApiKey) {
+      throw new ServiceUnavailableException(
+        'The Nest weather API is missing OPENWEATHER_API_KEY. Set it to enable weather-map layers.',
+      );
+    }
+
+    return this.requestBinary(
+      this.buildOpenWeatherTileUrl(layer, z, x, y),
+      `openweather-map-tile:${layer}:${z}:${x}:${y}`,
+      15 * 60 * 1000,
+    );
   }
 
   private get googleWeatherApiKey(): string {
@@ -329,6 +401,22 @@ export class WeatherProviderService {
     return (process.env['GOOGLE_GEOCODE_BASE_URL'] || 'https://geocode.googleapis.com/v4/geocode').trim();
   }
 
+  private get openWeatherApiKey(): string {
+    return (process.env['OPENWEATHER_API_KEY'] || '').trim();
+  }
+
+  private get openWeatherOneCallBaseUrl(): string {
+    return (process.env['OPENWEATHER_ONE_CALL_BASE_URL'] || 'https://api.openweathermap.org/data/3.0/onecall').trim();
+  }
+
+  private get openWeatherAirPollutionBaseUrl(): string {
+    return (process.env['OPENWEATHER_AIR_POLLUTION_BASE_URL'] || 'https://api.openweathermap.org/data/2.5/air_pollution').trim();
+  }
+
+  private get openWeatherTileBaseUrl(): string {
+    return (process.env['OPENWEATHER_TILE_BASE_URL'] || 'https://tile.openweathermap.org/map').trim();
+  }
+
   private get forecastHours(): number {
     return this.readPositiveInteger('GOOGLE_WEATHER_FORECAST_HOURS', 12);
   }
@@ -341,8 +429,12 @@ export class WeatherProviderService {
     return this.readPositiveInteger('GOOGLE_WEATHER_HISTORY_HOURS', 12);
   }
 
-  private get requestLimitPerMinute(): number {
+  private get googleRequestLimitPerMinute(): number {
     return this.readPositiveInteger('GOOGLE_WEATHER_REQUEST_LIMIT_PER_MINUTE', 25);
+  }
+
+  private get supplementalRequestLimitPerMinute(): number {
+    return this.readPositiveInteger('OPENWEATHER_REQUEST_LIMIT_PER_MINUTE', 180);
   }
 
   private ensureApiKeyConfigured(): void {
@@ -391,6 +483,24 @@ export class WeatherProviderService {
     }
   }
 
+  private async optionalSupplementalRequest<T>(
+    url: string,
+    cacheKey: string,
+    ttlMs: number,
+    surfaceName: string,
+    forceRefresh = false,
+  ): Promise<OptionalRequestResult<T>> {
+    try {
+      const data = await this.requestSupplemental<T>(url, cacheKey, ttlMs, forceRefresh);
+      return { data, warning: null };
+    } catch (error) {
+      return {
+        data: null,
+        warning: this.formatApiError(surfaceName, error),
+      };
+    }
+  }
+
   private async request<T>(url: string, cacheKey: string, ttlMs: number, forceRefresh = false): Promise<T> {
     const cachedValue = await this.readCache<T>(cacheKey, forceRefresh);
     if (cachedValue !== null) {
@@ -415,17 +525,63 @@ export class WeatherProviderService {
     return requestPromise;
   }
 
-  private async executeRequest<T>(url: string): Promise<T> {
-    await this.applyRateLimit();
+  private async requestSupplemental<T>(url: string, cacheKey: string, ttlMs: number, forceRefresh = false): Promise<T> {
+    const cachedValue = await this.readCache<T>(cacheKey, forceRefresh);
+    if (cachedValue !== null) {
+      return cachedValue;
+    }
+
+    const pendingRequest = this.pendingRequests.get(cacheKey) as Promise<T> | undefined;
+    if (pendingRequest) {
+      return pendingRequest;
+    }
+
+    const requestPromise = this.executeRequest<T>(url, 'supplemental')
+      .then(async (response) => {
+        await this.writeCache(cacheKey, response, ttlMs);
+        return response;
+      })
+      .finally(() => {
+        this.pendingRequests.delete(cacheKey);
+      });
+
+    this.pendingRequests.set(cacheKey, requestPromise);
+    return requestPromise;
+  }
+
+  private async requestBinary(url: string, cacheKey: string, ttlMs: number, forceRefresh = false): Promise<BinaryResponse> {
+    const cachedValue = await this.readCache<BinaryResponse>(cacheKey, forceRefresh);
+    if (cachedValue !== null) {
+      return cachedValue;
+    }
+
+    const pendingRequest = this.pendingRequests.get(cacheKey) as Promise<BinaryResponse> | undefined;
+    if (pendingRequest) {
+      return pendingRequest;
+    }
+
+    const requestPromise = this.executeBinaryRequest(url)
+      .then(async (response) => {
+        await this.writeCache(cacheKey, response, ttlMs);
+        return response;
+      })
+      .finally(() => {
+        this.pendingRequests.delete(cacheKey);
+      });
+
+    this.pendingRequests.set(cacheKey, requestPromise);
+    return requestPromise;
+  }
+
+  private async executeRequest<T>(url: string, provider: 'google' | 'supplemental' = 'google'): Promise<T> {
+    await this.applyRateLimit(provider);
 
     const response = await fetch(url);
     const responseText = await response.text();
     const responseJson = responseText ? JSON.parse(responseText) as T | ProviderErrorPayload : null;
 
     if (!response.ok) {
-      const providerMessage = responseJson && typeof responseJson === 'object' && 'error' in responseJson
-        ? responseJson.error?.message
-        : undefined;
+      const providerMessage = this.getProviderMessage(responseJson);
 
       throw new ProviderRequestError(response.status, response.statusText, providerMessage);
     }
@@ -437,21 +593,41 @@ export class WeatherProviderService {
     return responseJson as T;
   }
 
-  private async applyRateLimit(): Promise<void> {
-    const now = Date.now();
-    const oneMinuteAgo = now - 60 * 1000;
-    while (this.requestTimestamps.length && this.requestTimestamps[0] < oneMinuteAgo) {
-      this.requestTimestamps.shift();
+  private async executeBinaryRequest(url: string): Promise<BinaryResponse> {
+    await this.applyRateLimit('supplemental');
+
+    const response = await fetch(url);
+    if (!response.ok) {
+      throw new ProviderRequestError(response.status, response.statusText);
     }
 
-    if (this.requestTimestamps.length < this.requestLimitPerMinute) {
-      this.requestTimestamps.push(now);
+    return {
+      contentType: response.headers.get('content-type') || 'image/png',
+      body: Buffer.from(await response.arrayBuffer()),
+    };
+  }
+
+  private async applyRateLimit(provider: 'google' | 'supplemental'): Promise<void> {
+    const requestTimestamps = provider === 'google'
+      ? this.googleRequestTimestamps
+      : this.supplementalRequestTimestamps;
+    const requestLimitPerMinute = provider === 'google'
+      ? this.googleRequestLimitPerMinute
+      : this.supplementalRequestLimitPerMinute;
+    const now = Date.now();
+    const oneMinuteAgo = now - 60 * 1000;
+    while (requestTimestamps.length && requestTimestamps[0] < oneMinuteAgo) {
+      requestTimestamps.shift();
+    }
+
+    if (requestTimestamps.length < requestLimitPerMinute) {
+      requestTimestamps.push(now);
       return;
     }
 
-    const waitMs = 60 * 1000 - (now - this.requestTimestamps[0]) + 50;
+    const waitMs = 60 * 1000 - (now - requestTimestamps[0]) + 50;
     await new Promise((resolve) => setTimeout(resolve, waitMs));
-    this.requestTimestamps.push(Date.now());
+    requestTimestamps.push(Date.now());
   }
 
   private async readCache<T>(cacheKey: string, forceRefresh: boolean): Promise<T | null> {
@@ -658,6 +834,48 @@ export class WeatherProviderService {
     };
   }
 
+  private mapOpenWeatherAlerts(response: OpenWeatherOneCallResponse | null): WeatherAlert[] {
+    return (response?.alerts || []).map((alert) => ({
+      sender: alert.sender_name || 'OpenWeather',
+      event: alert.event || 'Weather alert',
+      start: alert.start || 0,
+      end: alert.end || 0,
+      description: alert.description || '',
+      tags: alert.tags || [],
+    }));
+  }
+
+  private mapAirQuality(response: OpenWeatherAirPollutionResponse | null): WeatherDashboard['airQuality'] {
+    const entry = response?.list?.[0];
+    const aqi = entry?.main?.aqi;
+    if (!aqi) {
+      return null;
+    }
+
+    return {
+      aqi,
+      label: this.airQualityLabel(aqi),
+      components: entry.components || {},
+    };
+  }
+
+  private airQualityLabel(aqi: number): string {
+    switch (aqi) {
+      case 1:
+        return 'Good';
+      case 2:
+        return 'Fair';
+      case 3:
+        return 'Moderate';
+      case 4:
+        return 'Poor';
+      case 5:
+        return 'Very poor';
+      default:
+        return 'Unknown';
+    }
+  }
+
   private buildIconUrl(iconBaseUri?: string): string {
     if (!iconBaseUri) {
       return '◌';
@@ -717,6 +935,18 @@ export class WeatherProviderService {
 
     const parsed = Date.parse(value);
     return Number.isNaN(parsed) ? 0 : Math.floor(parsed / 1000);
+  }
+
+  private buildOpenWeatherAlertsUrl(location: WeatherLocation): string {
+    return `${this.openWeatherOneCallBaseUrl}?lat=${location.lat}&lon=${location.lon}&units=metric&appid=${this.openWeatherApiKey}`;
+  }
+
+  private buildOpenWeatherAirQualityUrl(location: WeatherLocation): string {
+    return `${this.openWeatherAirPollutionBaseUrl}?lat=${location.lat}&lon=${location.lon}&appid=${this.openWeatherApiKey}`;
+  }
+
+  private buildOpenWeatherTileUrl(layer: WeatherMapLayerKey, z: number, x: number, y: number): string {
+    return `${this.openWeatherTileBaseUrl}/${layer}/${z}/${x}/${y}.png?appid=${this.openWeatherApiKey}`;
   }
 
   private getTimeZoneOffsetSeconds(epochSeconds: number, timeZone: string): number {
@@ -779,6 +1009,23 @@ export class WeatherProviderService {
     }
 
     return `${surfaceName} could not be loaded.`;
+  }
+
+  private getProviderMessage(responseJson: ProviderErrorPayload | unknown): string | undefined {
+    if (!responseJson || typeof responseJson !== 'object') {
+      return undefined;
+    }
+
+    if ('error' in responseJson && typeof responseJson.error === 'object' && responseJson.error &&
+      'message' in responseJson.error && typeof responseJson.error.message === 'string') {
+      return responseJson.error.message;
+    }
+
+    if ('message' in responseJson && typeof responseJson.message === 'string') {
+      return responseJson.message;
+    }
+
+    return undefined;
   }
 }
 

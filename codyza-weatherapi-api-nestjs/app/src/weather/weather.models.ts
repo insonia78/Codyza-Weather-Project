@@ -1,4 +1,5 @@
 export type LocationSource = 'search' | 'favorite' | 'recent' | 'geolocation' | 'map';
+export type WeatherMapLayerKey = 'clouds_new' | 'precipitation_new' | 'temp_new' | 'wind_new';
 
 export interface WeatherLocation {
   id: string;

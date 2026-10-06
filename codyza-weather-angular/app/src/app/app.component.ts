@@ -107,6 +107,7 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
 
   private map: google.maps.Map | null = null;
   private mapClickListener: google.maps.MapsEventListener | null = null;
+  private weatherLayerOverlay: google.maps.ImageMapType | null = null;
   private readonly markers: google.maps.Marker[] = [];
   private initialMapCentered = false;
   private autoRefreshSubscription: Subscription | null = null;
@@ -804,6 +805,7 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.activeDashboard) {
       this.centerMapOnLocation(this.activeDashboard.location);
     }
+    this.updateWeatherLayer();
     this.syncMapMarkers();
   }
 
@@ -818,7 +820,34 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   private updateWeatherLayer(): void {
-    return;
+    if (!this.map) {
+      return;
+    }
+
+    this.map.overlayMapTypes.clear();
+    this.weatherLayerOverlay = null;
+
+    if (!this.supportsWeatherLayers) {
+      return;
+    }
+
+    const tileTemplate = this.weatherService.weatherTileTemplate;
+    if (!tileTemplate) {
+      return;
+    }
+
+    this.weatherLayerOverlay = new google.maps.ImageMapType({
+      name: this.weatherService.layerLabels[this.selectedMapLayer],
+      opacity: 0.7,
+      tileSize: new google.maps.Size(256, 256),
+      getTileUrl: (coord, zoom) => tileTemplate
+        .replace('{layer}', this.selectedMapLayer)
+        .replace('{z}', String(zoom))
+        .replace('{x}', String(coord.x))
+        .replace('{y}', String(coord.y)),
+    });
+
+    this.map.overlayMapTypes.setAt(0, this.weatherLayerOverlay);
   }
 
   private syncMapMarkers(): void {

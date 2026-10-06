@@ -71,8 +71,28 @@ The weather API now uses an in-memory cache manager for provider responses. The 
 - hourly forecast cache: 10 minutes
 - daily forecast cache: 30 minutes
 - hourly history cache: 60 minutes
+- severe weather alerts cache: 10 minutes
+- air-quality cache: 15 minutes
+- weather map tiles cache: 15 minutes
 
 `forceRefresh: true` on the dashboard request still bypasses cached provider data and fetches fresh weather details.
+
+## Supplemental provider features
+
+The weather dashboard can now enrich the primary Google weather response with:
+
+- severe weather alerts
+- air-quality data
+- radar and weather-map tile overlays
+
+Set `OPENWEATHER_API_KEY` in the Nest environment to enable those supplemental capabilities. When that key is missing, the dashboard still returns current conditions, forecast, and history from Google, but it also includes a warning message so the frontend can explain why alerts/AQI/layers are unavailable.
+
+The weather-map tile proxy is exposed at `GET /weather/map-layers/:layer/:z/:x/:y`, where `layer` is one of:
+
+- `clouds_new`
+- `precipitation_new`
+- `temp_new`
+- `wind_new`
 
 ## Search history persistence
 

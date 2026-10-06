@@ -11,10 +11,10 @@ import { MapLayerKey, WeatherDashboard, WeatherLocation } from '../models/weathe
 })
 export class WeatherService {
   readonly providerName = 'Google Maps Weather API';
-  readonly supportsWeatherLayers = false;
+  readonly supportsWeatherLayers = true;
   readonly layerLabels: Record<MapLayerKey, string> = {
     clouds_new: 'Cloud cover',
-    precipitation_new: 'Precipitation radar',
+    precipitation_new: 'Precipitation',
     temp_new: 'Temperature',
     wind_new: 'Wind'
   };
@@ -29,7 +29,7 @@ export class WeatherService {
   }
 
   get weatherTileTemplate(): string {
-    return '';
+    return `${this.apiBaseUrl}/map-layers/{layer}/{z}/{x}/{y}`;
   }
 
   searchLocations(query: string): Observable<WeatherLocation[]> {

@@ -68,6 +68,12 @@ export const supportedRoutes = [
     ]
   },
   {
+    pattern: /^\/weather\/map-layers\/(clouds_new|precipitation_new|temp_new|wind_new)\/\d+\/\d+\/\d+\/?$/,
+    methods: [
+      "GET"
+    ]
+  },
+  {
     pattern: /^\/admin\/dashboard\/?$/,
     methods: [
       "POST"

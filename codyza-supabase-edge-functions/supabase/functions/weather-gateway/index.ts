@@ -386,6 +386,10 @@ function isAdminDashboardPath(proxyPath: string) {
   return proxyPath === "/admin/dashboard";
 }
 
+function isPublicWeatherMapLayerPath(proxyPath: string) {
+  return /^\/weather\/map-layers\/(clouds_new|precipitation_new|temp_new|wind_new)\/\d+\/\d+\/\d+\/?$/.test(proxyPath);
+}
+
 function getRecordStringValue(record: Record<string, unknown>, key: string) {
   const value = record[key];
   return typeof value === "string" ? value.trim() : "";
@@ -971,7 +975,7 @@ export default {
       }
 
       if (
-        service === SERVICES.WEATHER ||
+        (service === SERVICES.WEATHER && !isPublicWeatherMapLayerPath(proxyPath)) ||
         (service === SERVICES.ADMIN && isAdminDashboardPath(proxyPath))
       ) {
         logGatewayEvent("info", "weather.validation.started", {

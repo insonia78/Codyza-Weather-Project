@@ -284,6 +284,75 @@
       </section>
     }
 
+    @if (activeDashboard; as dashboard) {
+      <section class="insight-grid">
+        <section class="panel">
+          <div class="panel__header">
+            <div>
+              <p class="panel__eyebrow">Severe weather alerts</p>
+              <h2>Active alert feed</h2>
+            </div>
+            <p class="panel__subtext">Live alerts are supplemented by OpenWeather when coverage is available.</p>
+          </div>
+          @if (dashboard.alerts.length) {
+            <div class="alert-list">
+              @for (alert of dashboard.alerts; track alert.start + ':' + alert.event) {
+                <article class="alert-card">
+                  <div class="alert-card__header">
+                    <strong>{{ alert.event }}</strong>
+                    <span>{{ alert.sender }}</span>
+                  </div>
+                  <p>{{ alert.description }}</p>
+                  <div class="alert-card__meta">
+                    <span>Starts {{ formatDateTime(alert.start, dashboard.timezone, { weekday: 'short', hour: '2-digit', minute: '2-digit' }) }}</span>
+                    <span>Ends {{ formatDateTime(alert.end, dashboard.timezone, { weekday: 'short', hour: '2-digit', minute: '2-digit' }) }}</span>
+                  </div>
+                  @if (alert.tags.length) {
+                    <div class="tag-list">
+                      @for (tag of alert.tags; track tag) {
+                        <span class="tag-pill">{{ tag }}</span>
+                      }
+                    </div>
+                  }
+                </article>
+              }
+            </div>
+          } @else {
+            <p class="empty-copy">No active severe weather alerts were returned for this location.</p>
+          }
+        </section>
+
+        <section class="panel">
+          <div class="panel__header">
+            <div>
+              <p class="panel__eyebrow">Air quality</p>
+              <h2>Local air conditions</h2>
+            </div>
+            <p class="panel__subtext">AQI and pollutant components are refreshed with the weather dashboard.</p>
+          </div>
+          @if (dashboard.airQuality; as airQuality) {
+            <div class="aqi-summary">
+              <div class="aqi-summary__score">
+                <span>AQI</span>
+                <strong>{{ airQuality.aqi }}</strong>
+                <span>{{ airQuality.label }}</span>
+              </div>
+              <div class="aqi-components">
+                @for (component of airQuality.components | keyvalue; track component.key) {
+                  <div class="detail-chip">
+                    <span>{{ component.key | uppercase }}</span>
+                    <strong>{{ formatAirComponentValue(component.value) }}</strong>
+                  </div>
+                }
+              </div>
+            </div>
+          } @else {
+            <p class="empty-copy">Air-quality details are unavailable for this location or current provider configuration.</p>
+          }
+        </section>
+      </section>
+    }
+
     <section class="panel panel--map">
       <div class="panel__header">
         <div>
@@ -302,7 +371,12 @@
       </div>
       @if (hasMapsApiKey) {
         <div #mapElement class="map-canvas"></div>
-        <p class="panel__subtext">Click anywhere on the map to reverse-search coordinates and load live weather for that point.</p>
+        <p class="panel__subtext">
+          Click anywhere on the map to reverse-search coordinates and load live weather for that point.
+          @if (supportsWeatherLayers) {
+            Weather overlays stream from the Nest API so provider keys stay private.
+          }
+        </p>
       } @else {
         <div class="map-canvas"></div>
         <p class="panel__subtext">Add a public Google Maps JavaScript API key to re-enable the interactive map in the browser.</p>

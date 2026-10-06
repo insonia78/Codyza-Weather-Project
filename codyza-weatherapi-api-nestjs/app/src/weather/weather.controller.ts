@@ -1,6 +1,17 @@
-import { BadRequestException, Body, Controller, Get, Post, Query } from '@nestjs/common';
+import {
+  BadRequestException,
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Query,
+  Res,
+  StreamableFile,
+} from '@nestjs/common';
+import type { Response } from 'express';
 
-import type { DashboardRequestBody, LocationSource } from './weather.models.js';
+import type { DashboardRequestBody, LocationSource, WeatherMapLayerKey } from './weather.models.js';
 import { WeatherProviderService } from './weather.service.js';
 
 @Controller('weather')
@@ -42,6 +53,25 @@ export class WeatherController {
     return this.weatherService.getDashboard(body);
   }
 
+  @Get('map-layers/:layer/:z/:x/:y')
+  async getMapLayerTile(
+    @Param('layer') layer: string,
+    @Param('z') z: string,
+    @Param('x') x: string,
+    @Param('y') y: string,
+    @Res({ passthrough: true }) response: Response,
+  ) {
+    const tile = await this.weatherService.getMapLayerTile(
+      this.parseLayer(layer),
+      this.parseTileCoordinate(z, 'z'),
+      this.parseTileCoordinate(x, 'x'),
+      this.parseTileCoordinate(y, 'y'),
+    );
+    response.setHeader('Content-Type', tile.contentType);
+    response.setHeader('Cache-Control', 'public, max-age=900');
+    return new StreamableFile(tile.body);
+  }
+
   private parseCoordinate(value: string, name: string): number {
     const parsed = Number(value);
     if (!Number.isFinite(parsed)) {
@@ -62,5 +92,23 @@ export class WeatherController {
     }
 
     throw new BadRequestException('The source query parameter is invalid.');
+  }
+
+  private parseLayer(layer: string): WeatherMapLayerKey {
+    const validLayers: WeatherMapLayerKey[] = ['clouds_new', 'precipitation_new', 'temp_new', 'wind_new'];
+    if (validLayers.includes(layer as WeatherMapLayerKey)) {
+      return layer as WeatherMapLayerKey;
+    }
+
+    throw new BadRequestException('The map layer is invalid.');
+  }
+
+  private parseTileCoordinate(value: string, name: string): number {
+    const parsed = Number(value);
+    if (!Number.isInteger(parsed) || parsed < 0) {
+      throw new BadRequestException(`A valid ${name} tile parameter is required.`);
+    }
+
+    return parsed;
   }
 }
