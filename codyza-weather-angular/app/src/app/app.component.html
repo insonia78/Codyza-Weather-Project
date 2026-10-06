@@ -1,3 +1,4 @@
+@if (hasAuthenticatedSession) {
 <div class="weather-app" [ngClass]="backgroundClass()">
   <header class="hero">
     <div class="hero__copy">
@@ -680,3 +681,12 @@
     <a [href]="codyzaUrl" target="_blank" rel="noreferrer">Visit Codyza</a>
   </footer>
   </div>
+} @else {
+  <div class="weather-app theme-clear-day">
+    <section class="panel" aria-live="polite">
+      <p class="panel__eyebrow">Protected dashboard</p>
+      <h1>Codyza Weather</h1>
+      <p class="panel__subtext">Redirecting to Codyza sign-in...</p>
+    </section>
+  </div>
+}

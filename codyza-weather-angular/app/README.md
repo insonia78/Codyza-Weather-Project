@@ -44,6 +44,8 @@ When this app is deployed on Vercel, [vercel.json](./vercel.json) also rewrites 
 
 When a `jwt_token` exists in local storage, Angular automatically sends it as a `Bearer` token on outbound API requests through the shared HTTP interceptor. In production, the `weather-gateway` validates that token before forwarding the request to the weather API. The interceptor also sends the public Supabase `apikey` required by the deployed gateway validator.
 
+The Angular weather dashboard now performs an auth gate at startup. If no `jwt_token` is present, the app does not render the protected dashboard UI and immediately redirects the browser to `rootAppUrl` so users must sign in through the Codyza account flow first.
+
 Protected account sync uses two backend surfaces behind the same gateway-authenticated `/api/weather` namespace:
 
 - `/api/weather/search-history` for backend recent searches

@@ -66,7 +66,22 @@ describe('AppComponent', () => {
     expect(app.title).toEqual('Codyza Weather');
   });
 
+  it('should redirect unauthenticated visitors to the root app before rendering the dashboard', () => {
+    const fixture = TestBed.createComponent(AppComponent);
+    const app = fixture.componentInstance;
+    const redirectSpy = spyOn<any>(app, 'redirectToRootApp').and.stub();
+
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(redirectSpy).toHaveBeenCalled();
+    expect(compiled.textContent).toContain('Redirecting to Codyza sign-in...');
+    expect(compiled.textContent).not.toContain('Search and discovery');
+  });
+
   it('should render the brand title and empty state guidance', () => {
+    localStorage.setItem('jwt_token', createJwtToken({ email: 'weather.user@example.com' }));
+
     const fixture = TestBed.createComponent(AppComponent);
     fixture.detectChanges();
     const compiled = fixture.nativeElement as HTMLElement;
