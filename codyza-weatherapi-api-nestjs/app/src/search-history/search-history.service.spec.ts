@@ -50,7 +50,11 @@ describe('SearchHistoryService', () => {
 
     expect(client.query).toHaveBeenNthCalledWith(
       1,
-      expect.stringContaining('CREATE TABLE IF NOT EXISTS weather_search_history'),
+      expect.stringContaining('ALTER TABLE weather_search_history'),
+    );
+    expect(client.query).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining('CREATE UNIQUE INDEX IF NOT EXISTS idx_weather_search_history_user_location_unique'),
     );
     expect(client.query).toHaveBeenNthCalledWith(2, expect.stringContaining('FROM weather_search_history'), [
       'user@example.com',

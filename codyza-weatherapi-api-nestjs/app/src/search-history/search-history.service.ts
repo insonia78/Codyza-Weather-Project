@@ -139,6 +139,25 @@ export class SearchHistoryService {
             CONSTRAINT weather_search_history_user_location_unique UNIQUE (user_email, location_id)
           );
 
+          ALTER TABLE weather_search_history
+            ADD COLUMN IF NOT EXISTS query_text VARCHAR(255),
+            ADD COLUMN IF NOT EXISTS state_region VARCHAR(255),
+            ADD COLUMN IF NOT EXISTS source VARCHAR(20),
+            ADD COLUMN IF NOT EXISTS searched_at TIMESTAMPTZ;
+
+          UPDATE weather_search_history
+          SET
+            query_text = COALESCE(query_text, NULL),
+            state_region = COALESCE(state_region, NULL),
+            source = COALESCE(NULLIF(TRIM(source), ''), 'recent'),
+            searched_at = COALESCE(searched_at, NOW());
+
+          ALTER TABLE weather_search_history
+            ALTER COLUMN source SET DEFAULT 'recent',
+            ALTER COLUMN searched_at SET DEFAULT NOW(),
+            ALTER COLUMN source SET NOT NULL,
+            ALTER COLUMN searched_at SET NOT NULL;
+
           CREATE INDEX IF NOT EXISTS idx_weather_search_history_location_id
             ON weather_search_history (location_id);
 
@@ -150,6 +169,9 @@ export class SearchHistoryService {
 
           CREATE INDEX IF NOT EXISTS idx_weather_search_history_user_email_searched_at
             ON weather_search_history (user_email, searched_at DESC);
+
+          CREATE UNIQUE INDEX IF NOT EXISTS idx_weather_search_history_user_location_unique
+            ON weather_search_history (user_email, location_id);
         `,
       )
       .then(() => undefined)

@@ -126,7 +126,7 @@ These endpoints expect the authenticated user identity in the `X-User-Id` header
 
 Set `WEATHER_SEARCH_HISTORY_DATABASE_URL` so the search-history and protected profile services can persist user data in PostgreSQL. If that variable is not set, the Nest app now falls back to `WEATHER_OBSERVABILITY_DATABASE_URL`, then `DATABASE_URL`, which helps environments that share a single PostgreSQL instance across admin observability and user profile storage.
 
-The Nest API now bootstraps the `weather_search_history` table and its indexes automatically on first use, so new environments do not need a separate manual migration before recent-search or admin top-search features can work.
+The Nest API now bootstraps the `weather_search_history` table and its indexes automatically on first use, and it backfills newly introduced columns plus the unique user/location index in older deployments, so both new and already-running environments do not need a separate manual migration before recent-search or admin top-search features can work.
 
 ```sql
 CREATE TABLE weather_search_history (
