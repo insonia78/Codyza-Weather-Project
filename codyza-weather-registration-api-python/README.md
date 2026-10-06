@@ -27,6 +27,7 @@ api/
 - Password reset request + confirmation endpoints
 - Weather-gateway caller authentication for account routes
 - Automatic database and table creation on startup
+- Explicit SQLAlchemy connection pooling for the main PostgreSQL engine
 - SQLModel-based database models
 
 When `WEATHER_GATEWAY_INTERNAL_SECRET` is configured, the account routes only accept trusted requests forwarded by the Supabase `weather-gateway` edge function.
@@ -52,6 +53,10 @@ When `WEATHER_GATEWAY_INTERNAL_SECRET` is configured, the account routes only ac
 
    - `POSTGRES_URL`
    - `POSTGRES_FILE_NAME`
+   - `POSTGRES_POOL_SIZE` (optional, defaults to `5`)
+   - `POSTGRES_MAX_OVERFLOW` (optional, defaults to `10`)
+   - `POSTGRES_POOL_TIMEOUT_SECONDS` (optional, defaults to `30`)
+   - `POSTGRES_POOL_RECYCLE_SECONDS` (optional, defaults to `1800`)
    - `JWT_SECRET_KEY`
    - `JWT_ALGORITHM` (optional, defaults to `HS256`)
    - `WEATHER_GATEWAY_INTERNAL_SECRET` (shared with the `weather-gateway` edge function)

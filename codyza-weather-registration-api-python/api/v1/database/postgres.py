@@ -5,6 +5,7 @@ from dotenv import load_dotenv
 from fastapi import Depends
 from sqlalchemy import text
 from sqlalchemy.engine import make_url
+from sqlalchemy.pool import NullPool
 from sqlmodel import SQLModel, Session, create_engine
 
 from controller.accounts_controller.models import models
@@ -14,13 +15,50 @@ load_dotenv()
 postgre_file_name = os.getenv("POSTGRES_FILE_NAME")
 postgre_url=f"{os.getenv('POSTGRES_URL')}"
 
+DEFAULT_POOL_SIZE = 5
+DEFAULT_MAX_OVERFLOW = 10
+DEFAULT_POOL_TIMEOUT_SECONDS = 30
+DEFAULT_POOL_RECYCLE_SECONDS = 1800
+
+
+def _get_positive_int_env(env_var_name: str, default_value: int) -> int:
+    raw_value = (os.getenv(env_var_name) or "").strip()
+    if not raw_value:
+        return default_value
+
+    try:
+        parsed_value = int(raw_value)
+    except ValueError as exc:
+        raise RuntimeError(f"{env_var_name} must be a positive integer.") from exc
+
+    if parsed_value < 1:
+        raise RuntimeError(f"{env_var_name} must be a positive integer.")
+
+    return parsed_value
+
+
+def _build_main_engine_kwargs() -> dict:
+    return {
+        "echo": True,
+        "pool_pre_ping": True,
+        "pool_size": _get_positive_int_env("POSTGRES_POOL_SIZE", DEFAULT_POOL_SIZE),
+        "max_overflow": _get_positive_int_env("POSTGRES_MAX_OVERFLOW", DEFAULT_MAX_OVERFLOW),
+        "pool_timeout": _get_positive_int_env("POSTGRES_POOL_TIMEOUT_SECONDS", DEFAULT_POOL_TIMEOUT_SECONDS),
+        "pool_recycle": _get_positive_int_env("POSTGRES_POOL_RECYCLE_SECONDS", DEFAULT_POOL_RECYCLE_SECONDS),
+    }
+
+
 def _create_admin_engine():
     admin_url = make_url(postgre_url).set(database="postgres")
-    return create_engine(admin_url, isolation_level="AUTOCOMMIT")
+    return create_engine(
+        admin_url,
+        isolation_level="AUTOCOMMIT",
+        poolclass=NullPool,
+    )
 
 engine = create_engine(
-    postgre_url, 
-    echo=True
+    postgre_url,
+    **_build_main_engine_kwargs(),
 )
 
 

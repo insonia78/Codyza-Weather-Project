@@ -42,6 +42,10 @@ Required environment variables:
 
 - `POSTGRES_URL`: PostgreSQL connection string used by the application
 - `POSTGRES_FILE_NAME`: Database name checked and created at startup if missing
+- `POSTGRES_POOL_SIZE`: steady-state SQLAlchemy pool size, defaults to `5`
+- `POSTGRES_MAX_OVERFLOW`: extra transient connections allowed above the base pool size, defaults to `10`
+- `POSTGRES_POOL_TIMEOUT_SECONDS`: how long requests wait for a pooled connection, defaults to `30`
+- `POSTGRES_POOL_RECYCLE_SECONDS`: maximum connection age before recycling, defaults to `1800`
 - `JWT_SECRET_KEY`: Secret used to validate incoming bearer tokens
 - `JWT_ALGORITHM`: JWT signing algorithm, defaults to `HS256`
 - `WEATHER_GATEWAY_INTERNAL_SECRET`: shared secret used to trust requests proxied by the Supabase `weather-gateway` edge function
@@ -52,11 +56,26 @@ Example shape:
 ```env
 POSTGRES_URL=******localhost:5432/app_database
 POSTGRES_FILE_NAME=app_database
+POSTGRES_POOL_SIZE=5
+POSTGRES_MAX_OVERFLOW=10
+POSTGRES_POOL_TIMEOUT_SECONDS=30
+POSTGRES_POOL_RECYCLE_SECONDS=1800
 JWT_SECRET_KEY=replace-with-a-secure-secret
 JWT_ALGORITHM=HS256
 WEATHER_GATEWAY_INTERNAL_SECRET=replace-with-the-shared-gateway-secret
 ALLOWED_INBOUND_ORIGINS=https://app.example.com,https://admin.example.com
 ```
+
+## Database pooling
+
+The main SQLModel engine now uses an explicit SQLAlchemy connection pool with:
+
+- `pool_pre_ping=True` so dead PostgreSQL connections are detected before use
+- configurable base pool size and overflow capacity
+- configurable pool wait timeout
+- configurable connection recycling for longer-lived deployments
+
+The startup-only admin connection used to check whether the database exists intentionally uses `NullPool`, so it does not keep an extra idle connection open after startup.
 
 ## Local development
 
