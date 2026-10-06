@@ -14,6 +14,17 @@ export type PersistedJwtTokenRecord = {
   revokedAt: number | null;
 };
 
+type PersistedJwtTokenRecordRow = {
+  tokenId: string;
+  tokenSha: string;
+  userId: string;
+  role: string;
+  issuer: string;
+  issuedAt: number | string;
+  expiresAt: number | string;
+  revokedAt: number | string | null;
+};
+
 type SqlClient = ReturnType<typeof postgres>;
 
 export function getJwtTokenDatabaseUrl(): string | null {
@@ -73,9 +84,37 @@ export async function saveJwtTokenRecord(record: PersistedJwtTokenRecord): Promi
   });
 }
 
+function parseDatabaseNumber(value: number | string, fieldName: string): number {
+  if (typeof value === "number" && Number.isFinite(value)) {
+    return value;
+  }
+
+  if (typeof value === "string" && value.trim()) {
+    const parsed = Number(value);
+    if (Number.isFinite(parsed)) {
+      return parsed;
+    }
+  }
+
+  throw new Error(`Invalid numeric value returned for ${fieldName}`);
+}
+
+function normalizeJwtTokenRecord(row: PersistedJwtTokenRecordRow): PersistedJwtTokenRecord {
+  return {
+    tokenId: row.tokenId,
+    tokenSha: row.tokenSha,
+    userId: row.userId,
+    role: row.role,
+    issuer: row.issuer,
+    issuedAt: parseDatabaseNumber(row.issuedAt, "issuedAt"),
+    expiresAt: parseDatabaseNumber(row.expiresAt, "expiresAt"),
+    revokedAt: row.revokedAt === null ? null : parseDatabaseNumber(row.revokedAt, "revokedAt"),
+  };
+}
+
 export async function findJwtTokenRecordById(tokenId: string): Promise<PersistedJwtTokenRecord | null> {
   return await withJwtTokenDatabase(async (sql) => {
-    const rows = await sql<PersistedJwtTokenRecord[]>`
+    const rows = await sql<PersistedJwtTokenRecordRow[]>`
       select
         token_id as "tokenId",
         token_sha as "tokenSha",
@@ -90,7 +129,7 @@ export async function findJwtTokenRecordById(tokenId: string): Promise<Persisted
       limit 1
     `;
 
-    return rows[0] ?? null;
+    return rows[0] ? normalizeJwtTokenRecord(rows[0]) : null;
   });
 }
 
@@ -99,7 +138,7 @@ export async function revokeJwtTokenRecord(
   revokedAt = Math.floor(Date.now() / 1000),
 ): Promise<PersistedJwtTokenRecord | null> {
   return await withJwtTokenDatabase(async (sql) => {
-    const rows = await sql<PersistedJwtTokenRecord[]>`
+    const rows = await sql<PersistedJwtTokenRecordRow[]>`
       update jwt_tokens
       set revoked_at = ${revokedAt}
       where token_id = ${tokenId}
@@ -115,6 +154,6 @@ export async function revokeJwtTokenRecord(
         revoked_at as "revokedAt"
     `;
 
-    return rows[0] ?? null;
+    return rows[0] ? normalizeJwtTokenRecord(rows[0]) : null;
   });
 }

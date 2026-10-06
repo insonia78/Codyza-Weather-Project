@@ -3,7 +3,6 @@
 // This enables autocomplete, go to definition, etc.
 // Setup type definitions for built-in Supabase Runtime APIs
 // import "@supabase/functions-js/edge-runtime.d.ts";
-// import { withSupabase } from "@supabase/server";
 import { SignJWT } from "npm:jose@5";
 import {
   isJwtTokenDatabaseConfigured,
@@ -11,7 +10,11 @@ import {
   jwtTokenTableName,
   saveJwtTokenRecord,
 } from "../_shared/jwt-token-store.ts";
-import { weatherGatewayCallerHeader, weatherGatewaySecretHeader } from "../_shared/weather-gateway-auth.ts";
+import {
+  authorizeWeatherGatewayRequest,
+  weatherGatewayCallerHeader,
+  weatherGatewaySecretHeader,
+} from "../_shared/weather-gateway-auth.ts";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
@@ -198,14 +201,14 @@ export default {
         method: req.method
       });
     }
-    // const gatewayAuthorizationError = authorizeWeatherGatewayRequest(
-    //   req,
-    //   jsonResponse,
-    //   "jwt-creator",
-    // );
-    // if (gatewayAuthorizationError) {
-    //   return gatewayAuthorizationError;
-    // }
+    const gatewayAuthorizationError = authorizeWeatherGatewayRequest(
+      req,
+      jsonResponse,
+      "jwt-creator",
+    );
+    if (gatewayAuthorizationError) {
+      return gatewayAuthorizationError;
+    }
     try {
       const secretKey = Deno.env.get("MY_JWT_SECRET");
       if (!secretKey) {

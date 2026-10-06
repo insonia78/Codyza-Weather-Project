@@ -20,6 +20,7 @@ export class WeatherService {
   };
 
   private readonly apiBaseUrl = environment.googleWeather.apiBaseUrl.replace(/\/+$/, '');
+  private readonly authBaseUrl = this.apiBaseUrl.replace(/\/weather$/, '');
 
   constructor(private readonly http: HttpClient) {}
 
@@ -57,6 +58,12 @@ export class WeatherService {
       forceRefresh
     }).pipe(
       catchError((error: HttpErrorResponse) => this.handleBackendError('Weather dashboard', error))
+    );
+  }
+
+  logout(): Observable<{ revoked: boolean }> {
+    return this.http.post<{ revoked: boolean }>(`${this.authBaseUrl}/auth/logout`, {}).pipe(
+      catchError((error: HttpErrorResponse) => this.handleBackendError('Logout', error))
     );
   }
 

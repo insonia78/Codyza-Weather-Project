@@ -1,5 +1,5 @@
 export enum SERVICES {
   ACCOUNTS = "accounts",
-  WEATHER = "weather"
+  WEATHER = "weather",
+  AUTH = "auth"
 }
-

@@ -39,6 +39,7 @@ const weatherApiUrl =
   Deno.env.get("NEST_WEATHER_API_URL") ??
   Deno.env.get("BACKEND_URL");
 const jwtCreatorUrl = Deno.env.get("JWT_CREATOR_URL");
+const jwtRevokeUrl = Deno.env.get("JWT_REVOKE_URL");
 const gatewayInternalSecret = Deno.env.get("WEATHER_GATEWAY_INTERNAL_SECRET");
 const CONTAINER_HOSTNAME = "host.docker.internal";
 
@@ -105,9 +106,11 @@ function getConfiguredBackendsSummary() {
     hasRegistrationApiUrl: Boolean(registrationApiUrl),
     hasWeatherApiUrl: Boolean(weatherApiUrl),
     hasJwtCreatorUrl: Boolean(jwtCreatorUrl),
+    hasJwtRevokeUrl: Boolean(jwtRevokeUrl),
     hasGatewayInternalSecret: Boolean(gatewayInternalSecret),
     registrationBackend: registrationApiUrl ? summarizeBackendUrl(registrationApiUrl) : null,
     weatherBackend: weatherApiUrl ? summarizeBackendUrl(weatherApiUrl) : null,
+    jwtRevokeBackend: jwtRevokeUrl ? summarizeBackendUrl(jwtRevokeUrl) : null,
   };
 }
 
@@ -219,6 +222,10 @@ function inferService(proxyPath: string): SERVICES | null {
     return SERVICES.WEATHER;
   }
 
+  if (proxyPath.startsWith(`/${SERVICES.AUTH}`)) {
+    return SERVICES.AUTH;
+  }
+
   return null;
 }
 
@@ -229,6 +236,10 @@ function resolveBackendUrl(service: SERVICES | null): string | null {
 
   if (service === SERVICES.WEATHER) {
     return weatherApiUrl ?? null;
+  }
+
+  if (service === SERVICES.AUTH) {
+    return jwtRevokeUrl ?? null;
   }
 
   return registrationApiUrl ?? weatherApiUrl ?? null;
@@ -242,7 +253,13 @@ async function buildForwardBody(req: Request) {
   return await req.blob();
 }
 
-function buildTargetUrl(baseUrl: string, proxyPath: string, search: string) {
+function buildTargetUrl(baseUrl: string, proxyPath: string, search: string, service: SERVICES | null) {
+  if (service === SERVICES.AUTH) {
+    const targetUrl = new URL(baseUrl);
+    targetUrl.search = search;
+    return targetUrl;
+  }
+
   const normalizedBaseUrl = baseUrl.endsWith("/") ? baseUrl : `${baseUrl}/`;
   const parsedBaseUrl = new URL(normalizedBaseUrl);
   const baseSegments = parsedBaseUrl.pathname.split("/").filter(Boolean);
@@ -281,7 +298,7 @@ function buildProxyHeaders(
   headers.delete("host");
   headers.delete("content-length");
 
-  if (service === SERVICES.ACCOUNTS && gatewayInternalSecret) {
+  if ((service === SERVICES.ACCOUNTS || service === SERVICES.AUTH) && gatewayInternalSecret) {
     const gatewayHeaders = buildWeatherGatewayHeaders(gatewayInternalSecret);
     Object.entries(gatewayHeaders).forEach(([key, value]) => {
       headers.set(key, value);
@@ -404,9 +421,19 @@ async function appendTokenForAccountRoutes(
     return payload;
   }
 
+  if (!gatewayInternalSecret) {
+    throw new Error("Missing WEATHER_GATEWAY_INTERNAL_SECRET required for JWT creator forwarding.");
+  }
+
+  const jwtCreatorHeaders = new Headers(req.headers);
+  const gatewayHeaders = buildWeatherGatewayHeaders(gatewayInternalSecret);
+  Object.entries(gatewayHeaders).forEach(([key, value]) => {
+    jwtCreatorHeaders.set(key, value);
+  });
+
   const jwtResponse = await fetch(jwtCreatorUrl, {
     method: "POST",
-    headers: new Headers(req.headers),
+    headers: jwtCreatorHeaders,
     body: requestBody,
   });
 
@@ -490,7 +517,7 @@ export default {
     }
 
     const requestBody = await buildForwardBody(req);
-    const targetUrl = buildTargetUrl(backendBaseUrl, proxyPath, requestUrl.search);
+    const targetUrl = buildTargetUrl(backendBaseUrl, proxyPath, requestUrl.search, service);
 
     logGatewayEvent("info", "proxy.resolved", {
       requestId,

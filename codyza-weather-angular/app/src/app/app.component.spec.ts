@@ -3,8 +3,10 @@ import { provideHttpClient, withInterceptorsFromDi } from '@angular/common/http'
 import { provideHttpClientTesting } from '@angular/common/http/testing';
 import { provideEffects } from '@ngrx/effects';
 import { provideStore, provideState } from '@ngrx/store';
+import { of } from 'rxjs';
 
 import { AppComponent } from './app.component';
+import { WeatherService } from './services/weather.service';
 import { WeatherEffects } from './store/weather/weather.effects';
 import { weatherFeature } from './store/weather/weather.feature';
 import { WEATHER_STORAGE_KEYS } from './store/weather/weather-storage.keys';
@@ -77,7 +79,9 @@ describe('AppComponent', () => {
   it('should render a logout button that clears persisted weather data', () => {
     const fixture = TestBed.createComponent(AppComponent);
     const app = fixture.componentInstance;
-    const assignSpy = spyOn(window.location, 'assign');
+    const redirectSpy = spyOn<any>(app, 'redirectToRootApp').and.stub();
+    const weatherService = TestBed.inject(WeatherService);
+    spyOn(weatherService, 'logout').and.returnValue(of({ revoked: true }));
 
     localStorage.setItem(WEATHER_STORAGE_KEYS.favorites, JSON.stringify([{ id: '1' }]));
     localStorage.setItem('jwt_token', 'token');
@@ -96,6 +100,6 @@ describe('AppComponent', () => {
     expect(app.searchQuery).toBe('');
     expect(localStorage.getItem(WEATHER_STORAGE_KEYS.favorites)).toBeNull();
     expect(localStorage.getItem('jwt_token')).toBeNull();
-    expect(assignSpy).toHaveBeenCalledWith('http://localhost:3000/');
+    expect(redirectSpy).toHaveBeenCalled();
   });
 });

@@ -319,8 +319,24 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   }
 
   logout(): void {
+    if (!localStorage.getItem('jwt_token')) {
+      this.completeLogout();
+      return;
+    }
+
+    this.weatherService.logout().subscribe({
+      next: () => this.completeLogout(),
+      error: () => this.completeLogout(),
+    });
+  }
+
+  private completeLogout(): void {
     this.resetApp();
     localStorage.removeItem('jwt_token');
+    this.redirectToRootApp();
+  }
+
+  private redirectToRootApp(): void {
     window.location.assign(environment.rootAppUrl);
   }
 

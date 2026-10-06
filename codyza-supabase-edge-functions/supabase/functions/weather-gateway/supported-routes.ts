@@ -26,6 +26,12 @@ export const supportedRoutes = [
     ]
   },
   {
+    pattern: /^\/auth\/logout\/?$/,
+    methods: [
+      "POST"
+    ]
+  },
+  {
     pattern: /^\/weather\/status\/?$/,
     methods: [
       "GET"
