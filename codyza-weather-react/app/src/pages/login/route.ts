@@ -26,7 +26,7 @@ export async function loginAction({
   }
 
   try {
-    const adminRedirect = await redirectIfAdministrator(email);
+    const adminRedirect = await redirectIfAdministrator(email, "login");
     if (adminRedirect) {
       return adminRedirect;
     }

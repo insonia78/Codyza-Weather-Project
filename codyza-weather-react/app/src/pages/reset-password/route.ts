@@ -73,7 +73,7 @@ export async function resetPasswordAction({ request }: ActionFunctionArgs): Prom
 	}
 
 	try {
-    const adminRedirect = await redirectIfAdministrator(email);
+    const adminRedirect = await redirectIfAdministrator(email, "reset-password");
     if (adminRedirect) {
       return adminRedirect;
     }

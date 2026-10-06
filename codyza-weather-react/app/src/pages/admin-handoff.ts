@@ -4,6 +4,7 @@ import { appConfig } from "../config/environment";
 
 type AdminAccessResponse = {
   email: string;
+  passwordSetupRequired?: boolean;
 };
 
 function buildAdminCreatePasswordUrl(email: string): string | null {
@@ -15,7 +16,21 @@ function buildAdminCreatePasswordUrl(email: string): string | null {
   return `${normalizedBaseUrl}/create-password?email=${encodeURIComponent(email)}`;
 }
 
-export async function redirectIfAdministrator(email: string): Promise<Response | null> {
+function buildAdminLoginUrl(email: string): string | null {
+  if (!appConfig.adminAppUrl) {
+    return null;
+  }
+
+  const normalizedBaseUrl = appConfig.adminAppUrl.replace(/\/+$/, "");
+  return `${normalizedBaseUrl}/login?email=${encodeURIComponent(email)}`;
+}
+
+type AdminRedirectIntent = "login" | "registration" | "reset-password";
+
+export async function redirectIfAdministrator(
+  email: string,
+  intent: AdminRedirectIntent,
+): Promise<Response | null> {
   const adminAccessResponse = await fetch(
     `${process.env.REACT_APP_API_BASE_URL}/admin/access`,
     {
@@ -32,8 +47,10 @@ export async function redirectIfAdministrator(email: string): Promise<Response |
     return null;
   }
 
-  const { email: adminEmail } = (await adminAccessResponse.json()) as AdminAccessResponse;
-  const adminRedirectUrl = buildAdminCreatePasswordUrl(adminEmail);
+  const { email: adminEmail, passwordSetupRequired } = (await adminAccessResponse.json()) as AdminAccessResponse;
+  const adminRedirectUrl = passwordSetupRequired || intent !== "login"
+    ? buildAdminCreatePasswordUrl(adminEmail)
+    : buildAdminLoginUrl(adminEmail);
   if (!adminRedirectUrl) {
     throw new Error("This account is an administrator, but REACT_APP_ADMIN_APP_URL is not configured.");
   }

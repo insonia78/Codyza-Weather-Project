@@ -27,7 +27,7 @@ export async function registrationAction({
   }
 
   try {
-    const adminRedirect = await redirectIfAdministrator(email);
+    const adminRedirect = await redirectIfAdministrator(email, "registration");
     if (adminRedirect) {
       return adminRedirect;
     }
