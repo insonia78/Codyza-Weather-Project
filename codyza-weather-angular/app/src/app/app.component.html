@@ -1,12 +1,45 @@
 <div class="weather-app" [ngClass]="backgroundClass()">
   <header class="hero">
     <div class="hero__copy">
+      <div class="hero__brand">
+        <svg class="hero__brand-logo" viewBox="0 0 64 64" role="img" aria-label="Codyza logo">
+          <defs>
+            <linearGradient id="angular-codyza-gradient" x1="8" y1="8" x2="56" y2="56" gradientUnits="userSpaceOnUse">
+              <stop offset="0%" stop-color="#38bdf8" />
+              <stop offset="55%" stop-color="#2563eb" />
+              <stop offset="100%" stop-color="#0f172a" />
+            </linearGradient>
+          </defs>
+          <rect x="4" y="4" width="56" height="56" rx="18" fill="url(#angular-codyza-gradient)" />
+          <path
+            d="M20 25.5C20 18.6 25.6 13 32.5 13c4.1 0 7.9 2 10.2 5.3l-4.2 2.8c-1.4-2-3.6-3.2-6-3.2-4.2 0-7.6 3.4-7.6 7.6s3.4 7.6 7.6 7.6c2.4 0 4.7-1.1 6.1-3.1l4.1 2.8c-2.3 3.3-6 5.2-10.2 5.2-6.9 0-12.5-5.6-12.5-12.5Z"
+            fill="#f8fafc" />
+          <path
+            d="M18 44.5h28.7c2.9 0 5.3-2.3 5.3-5.1 0-2.6-2-4.7-4.6-5.1-.8-4.8-5-8.3-9.9-8.3-3.1 0-6 1.4-7.8 3.8a8 8 0 0 0-2-.3c-4.3 0-7.7 3.3-7.7 7.5 0 .9.2 1.7.4 2.5-.8.9-1.3 2.1-1.3 3.4 0 2.7 2.2 4.9 4.9 4.9Z"
+            fill="rgba(248,250,252,0.28)" />
+        </svg>
+        <div class="hero__brand-copy">
+          <p class="eyebrow">Powered by Codyza</p>
+          <strong>Codyza Weather</strong>
+        </div>
+      </div>
       <p class="eyebrow">Live global weather intelligence</p>
       <h1>{{ title }}</h1>
       <p class="hero__summary">
         Production-style frontend for live worldwide weather, geocoded location search, hourly forecast,
         daily outlook, recent history, and automatic refresh using {{ providerName }}.
       </p>
+      <section class="hero__about panel panel--brand">
+        <div>
+          <p class="panel__eyebrow">About Codyza</p>
+          <h2>Data-rich software with reliable operations.</h2>
+          <p class="panel__subtext">
+            Codyza designs and delivers polished digital platforms that combine live data, thoughtful UX,
+            and dependable backend services for production use.
+          </p>
+        </div>
+        <a class="primary-button hero__visit" [href]="codyzaUrl" target="_blank" rel="noreferrer">Visit Codyza</a>
+      </section>
       @if (loggedInEmail) {
         <div #notificationContainer class="hero__identity">
           <button
@@ -488,10 +521,8 @@
       </section>
     }
   </main>
-
-
-
-
-
-
+  <footer class="app-footer">
+    <span>Powered by Codyza</span>
+    <a [href]="codyzaUrl" target="_blank" rel="noreferrer">Visit Codyza</a>
+  </footer>
   </div>

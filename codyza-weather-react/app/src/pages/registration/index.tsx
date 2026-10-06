@@ -2,6 +2,7 @@ import React from "react";
 import { Form, Link, useActionData, useNavigation } from 'react-router-dom';
 import type { RegistrationActionData } from './route';
 import styles from './css/styles.module.css';
+import { CodyzaBranding } from '../../components/CodyzaBranding';
 const Registration = () => {    
   const actionData = useActionData() as RegistrationActionData | undefined;
   const navigation = useNavigation();
@@ -13,6 +14,7 @@ const Registration = () => {
   return (
     <main className={styles.page}>
       <section className={styles.card}>
+      <CodyzaBranding compact showPoweredBy={false} />
       <p className={styles.eyebrow}>Join Codyza Weather</p>
       <h1 className={styles.title}>Registration</h1>
       <p className={styles.description}>Create your account to save locations and alerts.</p>
@@ -49,6 +51,7 @@ const Registration = () => {
       <div className={styles.footerLinks}>
         <Link to="/login">Already have an account?</Link>
       </div>
+      <p className={styles.poweredBy}>Powered by Codyza</p>
       </section>
     </main>
   );

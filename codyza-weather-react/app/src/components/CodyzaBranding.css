@@ -1,0 +1,87 @@
+.codyza-brand {
+  display: grid;
+  gap: 16px;
+}
+
+.codyza-brand--compact {
+  gap: 12px;
+}
+
+.codyza-brand__mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+}
+
+.codyza-brand__logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  box-shadow: 0 14px 30px rgba(37, 99, 235, 0.18);
+}
+
+.codyza-brand--compact .codyza-brand__logo {
+  width: 48px;
+  height: 48px;
+}
+
+.codyza-brand__wordmark {
+  display: grid;
+  gap: 4px;
+}
+
+.codyza-brand__eyebrow {
+  margin: 0;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.18rem;
+  text-transform: uppercase;
+  color: #2563eb;
+}
+
+.codyza-brand__title {
+  margin: 0;
+  color: #10233f;
+  font-size: 1.1rem;
+  font-weight: 800;
+}
+
+.codyza-brand__about {
+  margin: 0;
+  color: #4d647d;
+  line-height: 1.7;
+}
+
+.codyza-brand__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.codyza-brand__button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 12px 18px;
+  border-radius: 999px;
+  background: rgba(37, 99, 235, 0.1);
+  color: #1d4ed8;
+  font-weight: 700;
+  text-decoration: none;
+  transition: transform 160ms ease, background 160ms ease;
+}
+
+.codyza-brand__button:hover {
+  transform: translateY(-1px);
+  background: rgba(37, 99, 235, 0.16);
+}
+
+.codyza-brand__powered {
+  margin: 0;
+  color: #526277;
+  font-size: 0.95rem;
+}
+
+.codyza-brand__powered strong {
+  color: #10233f;
+}

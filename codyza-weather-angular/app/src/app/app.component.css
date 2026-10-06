@@ -2,6 +2,42 @@
   display: block;
 }
 
+.hero__brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 14px;
+  margin-bottom: 18px;
+}
+
+.hero__brand-logo {
+  width: 56px;
+  height: 56px;
+  border-radius: 18px;
+  box-shadow: 0 14px 30px rgba(37, 99, 235, 0.22);
+}
+
+.hero__brand-copy {
+  display: grid;
+  gap: 4px;
+}
+
+.hero__brand-copy strong {
+  color: var(--text-primary);
+  font-size: 1.15rem;
+}
+
+.panel--brand {
+  margin-top: 24px;
+  display: flex;
+  justify-content: space-between;
+  gap: 20px;
+  align-items: center;
+}
+
+.hero__visit {
+  text-decoration: none;
+}
+
 .hero__identity {
   margin-top: 20px;
   position: relative;
@@ -87,4 +123,21 @@
   color: var(--text-primary);
   display: grid;
   gap: 8px;
+}
+
+.app-footer {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  flex-wrap: wrap;
+  margin-top: 32px;
+  padding: 20px 4px 0;
+  border-top: 1px solid rgba(148, 163, 184, 0.18);
+  color: var(--text-secondary);
+  font-weight: 600;
+}
+
+.app-footer a {
+  color: #7dd3fc;
+  text-decoration: none;
 }

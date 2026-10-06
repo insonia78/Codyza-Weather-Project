@@ -6,6 +6,7 @@ Codyza Weather is an Angular frontend backed by a NestJS API. The Nest service p
 - current conditions, hourly forecast, daily outlooks, 24-hour conditions history, and recent hourly history
 - geolocation, favorites, recent searches, multi-city comparison, caching, rate limiting, and automatic refresh
 - an interactive Google map for selecting locations and visualizing saved places
+- Codyza branding with a logo, About Codyza section, Visit Codyza action, and Powered by Codyza footer treatment
 
 ## Architecture
 

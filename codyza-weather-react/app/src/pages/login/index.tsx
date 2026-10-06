@@ -2,6 +2,7 @@ import React from "react";
 import { Form, Link, useActionData, useNavigation } from 'react-router-dom';
 import type { LoginActionData } from './route';
 import styles from './css/styles.module.css';
+import { CodyzaBranding } from '../../components/CodyzaBranding';
 
 const Login = () => {  
   const actionData = useActionData() as LoginActionData | undefined;
@@ -12,6 +13,7 @@ const Login = () => {
   return (
     <main className={styles.page}>
       <section className={styles.card}>
+      <CodyzaBranding compact showPoweredBy={false} />
       <p className={styles.eyebrow}>Welcome back</p>
       <h1 className={styles.title}>Login</h1>
       <p className={styles.description}>Access your weather dashboard and saved locations.</p>
@@ -45,6 +47,7 @@ const Login = () => {
         <Link to="/registration">Create an account</Link>
         <Link to="/reset-password">Forgot password?</Link>
       </div>
+      <p className={styles.poweredBy}>Powered by Codyza</p>
       </section>
     </main>
   );

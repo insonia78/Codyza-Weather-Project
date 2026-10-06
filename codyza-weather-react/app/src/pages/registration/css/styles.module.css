@@ -38,6 +38,12 @@
 	line-height: 1.6;
 }
 
+.card :global(.codyza-brand) {
+	margin-bottom: 20px;
+	padding-bottom: 20px;
+	border-bottom: 1px solid rgba(134, 239, 172, 0.35);
+}
+
 .form {
 	display: grid;
 	gap: 16px;
@@ -110,6 +116,13 @@
 	gap: 12px;
 	margin-top: 22px;
 	color: #0f766e;
+	font-weight: 600;
+}
+
+.poweredBy {
+	margin: 18px 0 0;
+	color: #4b635c;
+	font-size: 0.95rem;
 	font-weight: 600;
 }
 

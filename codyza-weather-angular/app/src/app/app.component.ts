@@ -91,6 +91,7 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('notificationContainer') notificationContainer?: ElementRef<HTMLDivElement>;
 
   readonly title = 'Codyza Weather';
+  readonly codyzaUrl = 'https://www.codyza.com';
   readonly providerName = this.weatherService.providerName;
   readonly supportsWeatherLayers = this.weatherService.supportsWeatherLayers;
   readonly layerOptions: LayerOption[] = this.supportsWeatherLayers

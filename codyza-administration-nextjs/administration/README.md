@@ -22,6 +22,8 @@ The admin UI is served from:
 - [app/login/page.tsx](./app/login/page.tsx)
 - [app/create-password/page.tsx](./app/create-password/page.tsx)
 
+These major admin surfaces now include Codyza branding with a reusable logo treatment, a short About Codyza section, Visit Codyza actions, and a Powered by Codyza footer.
+
 The App Router admin API route is served from:
 
 - [app/api/admin/dashboard/route.ts](./app/api/admin/dashboard/route.ts)

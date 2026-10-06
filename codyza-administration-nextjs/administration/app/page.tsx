@@ -3,6 +3,7 @@ export const dynamic = "force-dynamic";
 import { getAdminDashboard } from "../lib/admin-dashboard";
 import { getAdminSessionFromCookies } from "../lib/admin-session";
 import { LogoutButton } from "./logout-button";
+import { CodyzaBranding } from "./components/branding";
 
 function formatDateTime(value: string | null): string {
   if (!value) {
@@ -45,6 +46,9 @@ export default async function Home() {
           <p className="admin-subtext">
             Monitor live API usage, failures, search demand, active users, cache effectiveness, and platform health.
           </p>
+          <div className="admin-hero__branding">
+            <CodyzaBranding compact={true} />
+          </div>
         </div>
         <div className="admin-hero__meta">
           <span className="admin-user-chip">Signed in as {signedInAs}</span>

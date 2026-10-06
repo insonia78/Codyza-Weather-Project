@@ -35,6 +35,13 @@
 	text-transform: uppercase;
 }
 
+.poweredBy {
+	margin: 0;
+	color: #526277;
+	font-size: 0.95rem;
+	font-weight: 600;
+}
+
 .environmentBadge {
 	display: inline-flex;
 	align-items: center;
@@ -63,6 +70,14 @@
 	color: #486079;
 	font-size: 1.05rem;
 	line-height: 1.7;
+}
+
+.heroBranding {
+	margin-top: 28px;
+	padding: 22px 24px;
+	border-radius: 24px;
+	background: rgba(37, 99, 235, 0.05);
+	border: 1px solid rgba(37, 99, 235, 0.08);
 }
 
 .environmentDetails {
@@ -101,6 +116,23 @@
 	flex-wrap: wrap;
 	gap: 14px;
 	margin-top: 36px;
+}
+
+.heroFooter {
+	display: flex;
+	justify-content: space-between;
+	gap: 12px;
+	flex-wrap: wrap;
+	margin-top: 28px;
+	padding-top: 20px;
+	border-top: 1px solid rgba(148, 163, 184, 0.25);
+	color: #526277;
+	font-weight: 600;
+}
+
+.heroFooter a {
+	color: #1d4ed8;
+	text-decoration: none;
 }
 
 .primaryLink,
@@ -159,6 +191,10 @@
 	}
 
 	.heroActions {
+		flex-direction: column;
+	}
+
+	.heroFooter {
 		flex-direction: column;
 	}
 

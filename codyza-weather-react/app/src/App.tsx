@@ -6,13 +6,17 @@ import RegistrationRoute from './pages/registration/route';
 import ResetPasswordRoute from './pages/reset-password/route';
 import ErrorPage from './pages/error';
 import { appConfig } from './config/environment';
+import { CodyzaBranding } from './components/CodyzaBranding';
 
 function Home() {
   return (
     <main className="appShell">
       <section className="heroPanel">
         <div className="heroHeader">
-          <p className="eyebrow">{appConfig.appName}</p>
+          <div>
+            <p className="eyebrow">{appConfig.appName}</p>
+            <p className="poweredBy">Powered by Codyza</p>
+          </div>
           <span className="environmentBadge">{appConfig.environment}</span>
         </div>
         <h1>Weather updates without the clutter.</h1>
@@ -20,6 +24,9 @@ function Home() {
           Check conditions, manage your account, and recover access from a
           cleaner entry point.
         </p>
+        <div className="heroBranding">
+          <CodyzaBranding />
+        </div>
         <dl className="environmentDetails" aria-label="Environment configuration">
           <div>
             <dt>Environment</dt>
@@ -41,6 +48,12 @@ function Home() {
             Reset password
           </Link>
         </div>
+        <footer className="heroFooter">
+          <span>Powered by Codyza</span>
+          <a href="https://www.codyza.com" target="_blank" rel="noreferrer">
+            Visit Codyza
+          </a>
+        </footer>
       </section>
     </main>
   );
