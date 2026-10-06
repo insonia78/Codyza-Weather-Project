@@ -53,8 +53,8 @@ When `WEATHER_GATEWAY_INTERNAL_SECRET` is configured, the account routes only ac
 
    - `POSTGRES_URL`
    - `POSTGRES_FILE_NAME`
-   - `POSTGRES_POOL_SIZE` (optional, defaults to `5`)
-   - `POSTGRES_MAX_OVERFLOW` (optional, defaults to `10`)
+   - `POSTGRES_POOL_SIZE` (optional, defaults to `3`)
+   - `POSTGRES_MAX_OVERFLOW` (optional, defaults to `1`)
    - `POSTGRES_POOL_TIMEOUT_SECONDS` (optional, defaults to `30`)
    - `POSTGRES_POOL_RECYCLE_SECONDS` (optional, defaults to `1800`)
    - `JWT_SECRET_KEY`

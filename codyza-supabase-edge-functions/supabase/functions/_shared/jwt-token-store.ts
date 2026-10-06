@@ -2,6 +2,12 @@ import postgres from "npm:postgres";
 
 export const jwtTokenDatabaseUrlEnvVar = "JWT_TOKEN_DATABASE_URL";
 export const jwtTokenTableName = "jwt_tokens";
+const jwtTokenDatabasePoolMaxEnvVar = "JWT_TOKEN_DATABASE_POOL_MAX";
+const jwtTokenDatabaseIdleTimeoutSecondsEnvVar = "JWT_TOKEN_DATABASE_IDLE_TIMEOUT_SECONDS";
+const jwtTokenDatabaseConnectTimeoutSecondsEnvVar = "JWT_TOKEN_DATABASE_CONNECT_TIMEOUT_SECONDS";
+const defaultJwtTokenDatabasePoolMax = 2;
+const defaultJwtTokenDatabaseIdleTimeoutSeconds = 30;
+const defaultJwtTokenDatabaseConnectTimeoutSeconds = 5;
 
 export type PersistedJwtTokenRecord = {
   tokenId: string;
@@ -26,6 +32,7 @@ type PersistedJwtTokenRecordRow = {
 };
 
 type SqlClient = ReturnType<typeof postgres>;
+let sharedSqlClient: SqlClient | null = null;
 
 export function getJwtTokenDatabaseUrl(): string | null {
   const databaseUrl = Deno.env.get(jwtTokenDatabaseUrlEnvVar)?.trim();
@@ -36,26 +43,46 @@ export function isJwtTokenDatabaseConfigured(): boolean {
   return Boolean(getJwtTokenDatabaseUrl());
 }
 
-export async function withJwtTokenDatabase<T>(
-  callback: (sql: SqlClient) => Promise<T>,
-): Promise<T> {
+function readPositiveIntegerEnv(envVarName: string, fallback: number): number {
+  const rawValue = Deno.env.get(envVarName)?.trim() ?? "";
+  if (!rawValue) {
+    return fallback;
+  }
+
+  const parsedValue = Number.parseInt(rawValue, 10);
+  return Number.isFinite(parsedValue) && parsedValue > 0 ? parsedValue : fallback;
+}
+
+function getJwtTokenDatabaseClient(): SqlClient {
+  if (sharedSqlClient) {
+    return sharedSqlClient;
+  }
+
   const databaseUrl = getJwtTokenDatabaseUrl();
   if (!databaseUrl) {
     throw new Error(`Missing ${jwtTokenDatabaseUrlEnvVar} environment variable.`);
   }
 
-  const sql = postgres(databaseUrl, {
-    max: 1,
+  sharedSqlClient = postgres(databaseUrl, {
+    max: readPositiveIntegerEnv(jwtTokenDatabasePoolMaxEnvVar, defaultJwtTokenDatabasePoolMax),
     prepare: false,
-    connect_timeout: 5,
-    idle_timeout: 5,
+    connect_timeout: readPositiveIntegerEnv(
+      jwtTokenDatabaseConnectTimeoutSecondsEnvVar,
+      defaultJwtTokenDatabaseConnectTimeoutSeconds,
+    ),
+    idle_timeout: readPositiveIntegerEnv(
+      jwtTokenDatabaseIdleTimeoutSecondsEnvVar,
+      defaultJwtTokenDatabaseIdleTimeoutSeconds,
+    ),
   });
 
-  try {
-    return await callback(sql);
-  } finally {
-    await sql.end({ timeout: 5 });
-  }
+  return sharedSqlClient;
+}
+
+export async function withJwtTokenDatabase<T>(
+  callback: (sql: SqlClient) => Promise<T>,
+): Promise<T> {
+  return await callback(getJwtTokenDatabaseClient());
 }
 
 export async function saveJwtTokenRecord(record: PersistedJwtTokenRecord): Promise<void> {

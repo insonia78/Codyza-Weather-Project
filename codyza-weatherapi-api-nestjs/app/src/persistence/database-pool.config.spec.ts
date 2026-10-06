@@ -25,12 +25,16 @@ describe('buildDatabasePoolConfig', () => {
     delete process.env.WEATHER_OBSERVABILITY_POOL_MAX;
 
     expect(buildDatabasePoolConfig('******example.com:5432/weather', true, 'WEATHER_DATABASE_POOL')).toMatchObject({
-      max: 10,
+      max: 6,
       idleTimeoutMillis: 30_000,
       connectionTimeoutMillis: 5_000,
       maxLifetimeSeconds: 1_800,
       allowExitOnIdle: false,
       ssl: { rejectUnauthorized: false },
+    });
+
+    expect(buildDatabasePoolConfig('******example.com:5432/weather', true, 'WEATHER_OBSERVABILITY_POOL')).toMatchObject({
+      max: 3,
     });
   });
 

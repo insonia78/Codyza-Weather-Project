@@ -1,6 +1,7 @@
 import type { PoolConfig } from 'pg';
 
-const defaultPoolMax = 10;
+const defaultWeatherPoolMax = 6;
+const defaultObservabilityPoolMax = 3;
 const defaultPoolIdleTimeoutMs = 30_000;
 const defaultPoolConnectionTimeoutMs = 5_000;
 const defaultPoolMaxLifetimeSeconds = 1_800;
@@ -31,6 +32,10 @@ export function buildDatabasePoolConfig(
   useSsl: boolean,
   prefix: PoolEnvPrefix,
 ): PoolConfig {
+  const defaultPoolMax = prefix === 'WEATHER_OBSERVABILITY_POOL'
+    ? defaultObservabilityPoolMax
+    : defaultWeatherPoolMax;
+
   return {
     connectionString,
     max: readPositiveInteger([`${prefix}_MAX`, 'WEATHER_DATABASE_POOL_MAX'], defaultPoolMax),

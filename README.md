@@ -65,4 +65,5 @@ The platform supports self-service user registration, so a seeded end-user accou
 
 - Weather provider credentials remain server-side and must not be exposed in browser bundles.
 - Public browser-facing keys such as a publishable Supabase key or a browser maps key should still be scoped and rotated through provider consoles as needed.
+- Supabase Edge Functions now reuse a shared pooled PostgreSQL client for JWT token persistence, configured by `JWT_TOKEN_DATABASE_URL`, `JWT_TOKEN_DATABASE_POOL_MAX`, `JWT_TOKEN_DATABASE_IDLE_TIMEOUT_SECONDS`, and `JWT_TOKEN_DATABASE_CONNECT_TIMEOUT_SECONDS`.
 - See [docs/acceptance-checklist.md](./docs/acceptance-checklist.md) for the current pass, partial, and follow-up items mapped to the original requirements.

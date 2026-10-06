@@ -133,6 +133,10 @@ The search-history/profile database client uses an explicit `pg.Pool` with confi
 - `WEATHER_DATABASE_POOL_CONNECTION_TIMEOUT_MS`
 - `WEATHER_DATABASE_POOL_MAX_LIFETIME_SECONDS`
 
+Recommended shared 15-connection budget:
+
+- Nest weather/profile/search-history pool: `6`
+
 The Nest API now bootstraps the `weather_search_history` table and its indexes automatically on first use, and it backfills newly introduced columns plus the unique user/location index in older deployments, so both new and already-running environments do not need a separate manual migration before recent-search or admin top-search features can work.
 
 ```sql
@@ -195,6 +199,8 @@ The observability database client also uses an explicit `pg.Pool`, with optional
 - `WEATHER_OBSERVABILITY_POOL_MAX_LIFETIME_SECONDS`
 
 If an observability-specific pool variable is not set, the service falls back to the shared `WEATHER_DATABASE_POOL_*` value before using its internal defaults.
+
+- Nest admin observability pool: `3`
 This endpoint now requires:
 
 - a JWT that was validated by the gateway

@@ -42,8 +42,8 @@ Required environment variables:
 
 - `POSTGRES_URL`: PostgreSQL connection string used by the application
 - `POSTGRES_FILE_NAME`: Database name checked and created at startup if missing
-- `POSTGRES_POOL_SIZE`: steady-state SQLAlchemy pool size, defaults to `5`
-- `POSTGRES_MAX_OVERFLOW`: extra transient connections allowed above the base pool size, defaults to `10`
+- `POSTGRES_POOL_SIZE`: steady-state SQLAlchemy pool size, defaults to `3`
+- `POSTGRES_MAX_OVERFLOW`: extra transient connections allowed above the base pool size, defaults to `1`
 - `POSTGRES_POOL_TIMEOUT_SECONDS`: how long requests wait for a pooled connection, defaults to `30`
 - `POSTGRES_POOL_RECYCLE_SECONDS`: maximum connection age before recycling, defaults to `1800`
 - `JWT_SECRET_KEY`: Secret used to validate incoming bearer tokens
@@ -56,8 +56,8 @@ Example shape:
 ```env
 POSTGRES_URL=******localhost:5432/app_database
 POSTGRES_FILE_NAME=app_database
-POSTGRES_POOL_SIZE=5
-POSTGRES_MAX_OVERFLOW=10
+POSTGRES_POOL_SIZE=3
+POSTGRES_MAX_OVERFLOW=1
 POSTGRES_POOL_TIMEOUT_SECONDS=30
 POSTGRES_POOL_RECYCLE_SECONDS=1800
 JWT_SECRET_KEY=replace-with-a-secure-secret
@@ -76,6 +76,10 @@ The main SQLModel engine now uses an explicit SQLAlchemy connection pool with:
 - configurable connection recycling for longer-lived deployments
 
 The startup-only admin connection used to check whether the database exists intentionally uses `NullPool`, so it does not keep an extra idle connection open after startup.
+
+Recommended shared 15-connection budget:
+
+- Python registration API: `3` base connections + `1` overflow = `4`
 
 ## Local development
 
