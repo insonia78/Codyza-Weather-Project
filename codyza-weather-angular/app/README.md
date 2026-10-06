@@ -3,9 +3,11 @@
 Codyza Weather is an Angular frontend backed by a NestJS API. The Nest service proxies Google Maps Weather API and Google geocoding requests so the server-side weather key no longer ships in the browser bundle. The Angular app is configured for Node `24.19.0`, bootstraps with standalone components, and uses NgRx store/effects plus Angular signals for UI state. The UI includes:
 
 - location search for cities, addresses, ZIP/postal codes, and coordinates
+- debounced production-style autocomplete, including airport/IATA-friendly search ranking
 - current conditions, hourly forecast, daily outlooks, 24-hour conditions history, and recent hourly history
 - severe weather alerts, air-quality cards, and weather overlay layers streamed from the backend
 - geolocation, favorites, recent searches, multi-city comparison, caching, rate limiting, and automatic refresh
+- a protected user dashboard that syncs favorites, comparisons, units, weather-layer settings, and notification preferences
 - an interactive Google map for selecting locations and visualizing saved places
 - Codyza branding with a logo, About Codyza section, Visit Codyza action, and Powered by Codyza footer treatment
 
@@ -41,6 +43,11 @@ The Angular app uses two weather API base URLs:
 When this app is deployed on Vercel, [vercel.json](./vercel.json) also rewrites `/api/:match*` to the Supabase `weather-gateway` function so same-origin `/api/...` requests keep working for weather routes, logout, and persisted search-history calls.
 
 When a `jwt_token` exists in local storage, Angular automatically sends it as a `Bearer` token on outbound API requests through the shared HTTP interceptor. In production, the `weather-gateway` validates that token before forwarding the request to the weather API. The interceptor also sends the public Supabase `apikey` required by the deployed gateway validator.
+
+Protected account sync uses two backend surfaces behind the same gateway-authenticated `/api/weather` namespace:
+
+- `/api/weather/search-history` for backend recent searches
+- `/api/weather/profile` for synced favorites, comparisons, units, map-layer selections, and notification preferences
 
 If you want the interactive map enabled in the browser, set a public Google Maps JavaScript API key in:
 

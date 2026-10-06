@@ -1,24 +1,9 @@
-import type { QueryResult } from 'pg';
-
+import type { WeatherDatabaseQueryClient } from '../persistence/weather-database.service.js';
 import type { SaveSearchHistoryRequestBody } from './search-history.models.js';
 import { SearchHistoryService } from './search-history.service.js';
 
-interface MockQueryClient {
-  query: ReturnType<typeof vi.fn>;
-}
-
-class TestSearchHistoryService extends SearchHistoryService {
-  constructor(private readonly mockClient: MockQueryClient) {
-    super();
-  }
-
-  protected override getDatabaseClient() {
-    return this.mockClient as never;
-  }
-}
-
 describe('SearchHistoryService', () => {
-  const createQueryResult = <T>(rows: T[]): QueryResult<T> => ({
+  const createQueryResult = <T>(rows: T[]) => ({
     rows,
     rowCount: rows.length,
     command: 'SELECT',
@@ -43,7 +28,9 @@ describe('SearchHistoryService', () => {
       ),
     };
 
-    const service = new TestSearchHistoryService(client);
+    const service = new SearchHistoryService({
+      getClient: () => client as WeatherDatabaseQueryClient,
+    } as never);
 
     await expect(service.listRecentSearches('user@example.com')).resolves.toEqual([
       {
@@ -98,7 +85,9 @@ describe('SearchHistoryService', () => {
         ),
     };
 
-    const service = new TestSearchHistoryService(client);
+    const service = new SearchHistoryService({
+      getClient: () => client as WeatherDatabaseQueryClient,
+    } as never);
 
     await expect(service.saveRecentSearch('user@example.com', savedSearchBody)).resolves.toEqual([
       {

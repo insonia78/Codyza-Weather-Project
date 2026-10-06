@@ -1,5 +1,8 @@
 export type LocationSource = 'search' | 'favorite' | 'recent' | 'geolocation' | 'map';
 export type WeatherMapLayerKey = 'clouds_new' | 'precipitation_new' | 'temp_new' | 'wind_new';
+export type LocationCategory = 'city' | 'airport' | 'postal_code' | 'address' | 'coordinates';
+export type TemperatureUnit = 'celsius' | 'fahrenheit';
+export type MeasurementSystem = 'metric' | 'imperial';
 
 export interface WeatherLocation {
   id: string;
@@ -10,6 +13,8 @@ export interface WeatherLocation {
   lon: number;
   label: string;
   source: LocationSource;
+  category?: LocationCategory;
+  airportCode?: string;
 }
 
 export interface CurrentConditions {

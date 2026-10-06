@@ -13,6 +13,7 @@ import {
   DashboardRequestBody,
   HistoricalSummary,
   HourlyForecastPoint,
+  LocationCategory,
   WeatherAlert,
   WeatherDashboard,
   WeatherLocation,
@@ -254,8 +255,11 @@ export class WeatherProviderService {
       15 * 60 * 1000,
     );
 
-    const primaryResults = this.uniqueLocations(
-      this.getGeocodeResults(primary).map((result) => this.mapGeocodeResult(result, 'search'))
+    const primaryResults = this.rankSearchResults(
+      normalizedQuery,
+      this.uniqueLocations(
+        this.getGeocodeResults(primary).map((result) => this.mapGeocodeResult(result, 'search', normalizedQuery))
+      )
     ).slice(0, 6);
 
     if (!this.isAirportCodeQuery(normalizedQuery)) {
@@ -268,10 +272,13 @@ export class WeatherProviderService {
       15 * 60 * 1000,
     );
 
-    return this.uniqueLocations([
-      ...primaryResults,
-      ...this.getGeocodeResults(airport).map((result) => this.mapGeocodeResult(result, 'search'))
-    ]).slice(0, 8);
+    return this.rankSearchResults(
+      normalizedQuery,
+      this.uniqueLocations([
+        ...primaryResults,
+        ...this.getGeocodeResults(airport).map((result) => this.mapGeocodeResult(result, 'search', normalizedQuery))
+      ]),
+    ).slice(0, 8);
   }
 
   async reverseGeocode(lat: number, lon: number, source: WeatherLocation['source']): Promise<WeatherLocation[]> {
@@ -695,11 +702,23 @@ export class WeatherProviderService {
     return /^[A-Za-z]{3,4}$/.test(query);
   }
 
-  private mapGeocodeResult(result: GoogleGeocodeResult, source: WeatherLocation['source']): WeatherLocation {
+  private mapGeocodeResult(
+    result: GoogleGeocodeResult,
+    source: WeatherLocation['source'],
+    query = '',
+  ): WeatherLocation {
     const locality = this.findAddressComponent(result, ['locality', 'postal_town', 'administrative_area_level_2']);
     const state = this.findAddressComponent(result, ['administrative_area_level_1'], true);
     const country = this.findAddressComponent(result, ['country']) || 'Unknown';
-    const name = locality || result.formattedAddress.split(',')[0] || 'Selected location';
+    const category = this.detectLocationCategory(result, locality);
+    const airportCode = category === 'airport'
+      ? this.extractAirportCode(result, query)
+      : undefined;
+    const fallbackName = result.formattedAddress.split(',')[0] || 'Selected location';
+    const airportName = this.normalizeAirportName(fallbackName, airportCode);
+    const name = category === 'airport'
+      ? airportName
+      : locality || fallbackName;
 
     return {
       id: `${result.location.latitude.toFixed(3)}:${result.location.longitude.toFixed(3)}`,
@@ -708,8 +727,10 @@ export class WeatherProviderService {
       country,
       lat: result.location.latitude,
       lon: result.location.longitude,
-      label: result.formattedAddress,
-      source
+      label: this.buildLocationLabel(result.formattedAddress, category, airportCode),
+      source,
+      category,
+      airportCode,
     };
   }
 
@@ -740,8 +761,106 @@ export class WeatherProviderService {
       lat,
       lon,
       label: `${lat.toFixed(3)}, ${lon.toFixed(3)}`,
-      source
+      source,
+      category: 'coordinates',
     };
+  }
+
+  private detectLocationCategory(result: GoogleGeocodeResult, locality: string | null): LocationCategory {
+    if (result.types?.includes('airport') || /airport/i.test(result.formattedAddress)) {
+      return 'airport';
+    }
+
+    if (result.types?.includes('postal_code')) {
+      return 'postal_code';
+    }
+
+    if (locality) {
+      return 'city';
+    }
+
+    return 'address';
+  }
+
+  private extractAirportCode(result: GoogleGeocodeResult, query: string): string | undefined {
+    const sourceText = [
+      result.placeId,
+      result.formattedAddress,
+      this.findAddressComponent(result, ['airport'], true),
+      query,
+    ].filter((entry): entry is string => Boolean(entry));
+
+    for (const entry of sourceText) {
+      const codeMatch = entry.toUpperCase().match(/\b([A-Z]{3,4})\b/);
+      if (codeMatch) {
+        return codeMatch[1];
+      }
+    }
+
+    return query && this.isAirportCodeQuery(query) ? query.toUpperCase() : undefined;
+  }
+
+  private normalizeAirportName(name: string, airportCode?: string): string {
+    if (!airportCode || name.toUpperCase().includes(`(${airportCode})`)) {
+      return name;
+    }
+
+    return /airport/i.test(name)
+      ? `${name} (${airportCode})`
+      : `${name} Airport (${airportCode})`;
+  }
+
+  private buildLocationLabel(label: string, category: LocationCategory, airportCode?: string): string {
+    if (category !== 'airport' || !airportCode || label.toUpperCase().includes(`(${airportCode})`)) {
+      return label;
+    }
+
+    return `${label} (${airportCode})`;
+  }
+
+  private rankSearchResults(query: string, results: WeatherLocation[]): WeatherLocation[] {
+    const normalizedQuery = query.trim().toLowerCase();
+    const airportCodeQuery = this.isAirportCodeQuery(query);
+
+    return [...results].sort((left, right) => this.scoreLocation(right, normalizedQuery, airportCodeQuery) - this.scoreLocation(left, normalizedQuery, airportCodeQuery));
+  }
+
+  private scoreLocation(location: WeatherLocation, normalizedQuery: string, airportCodeQuery: boolean): number {
+    const normalizedName = location.name.toLowerCase();
+    const normalizedLabel = location.label.toLowerCase();
+    const normalizedAirportCode = location.airportCode?.toLowerCase() || '';
+
+    let score = 0;
+
+    if (normalizedAirportCode && normalizedAirportCode === normalizedQuery) {
+      score += 40;
+    }
+    if (normalizedName === normalizedQuery) {
+      score += 24;
+    }
+    if (normalizedLabel === normalizedQuery) {
+      score += 20;
+    }
+    if (normalizedName.startsWith(normalizedQuery)) {
+      score += 14;
+    }
+    if (normalizedLabel.startsWith(normalizedQuery)) {
+      score += 10;
+    }
+    if (normalizedName.includes(normalizedQuery)) {
+      score += 6;
+    }
+    if (normalizedLabel.includes(normalizedQuery)) {
+      score += 4;
+    }
+    if (location.category === 'airport') {
+      score += airportCodeQuery ? 12 : 2;
+    }
+    if (location.category === 'city') {
+      score += airportCodeQuery ? 0 : 3;
+    }
+
+    return score;
   }
 
   private mapCurrentConditions(

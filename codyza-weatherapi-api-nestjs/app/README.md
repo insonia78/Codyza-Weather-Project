@@ -102,6 +102,8 @@ Recent searches are now handled by a dedicated Nest search-history service inste
 - `GET /weather/search-history`
 - `POST /weather/search-history`
 - `DELETE /weather/search-history`
+- `GET /weather/profile`
+- `PUT /weather/profile`
 
 These endpoints expect the authenticated user identity in the `X-User-Id` header that the gateway already forwards from the validated JWT subject.
 
@@ -125,7 +127,21 @@ CREATE TABLE weather_search_history (
 
 CREATE INDEX idx_weather_search_history_user_email_searched_at
   ON weather_search_history (user_email, searched_at DESC);
+
+CREATE TABLE weather_user_profiles (
+  user_email VARCHAR(320) PRIMARY KEY,
+  favorites JSONB NOT NULL DEFAULT '[]'::jsonb,
+  comparison_locations JSONB NOT NULL DEFAULT '[]'::jsonb,
+  temperature_unit VARCHAR(20) NOT NULL DEFAULT 'celsius',
+  measurement_system VARCHAR(20) NOT NULL DEFAULT 'metric',
+  selected_map_layer VARCHAR(30) NOT NULL DEFAULT 'clouds_new',
+  auto_refresh BOOLEAN NOT NULL DEFAULT true,
+  notification_preferences JSONB NOT NULL DEFAULT '{"dailySummary": true, "severeWeather": true, "airQuality": false, "weekendOutlook": false}'::jsonb,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
 ```
+
+`GET /weather/profile` returns the protected user dashboard payload that combines persisted favorites, comparisons, units, map-layer settings, notification preferences, and backend-backed recent searches. The service also lazily creates `weather_user_profiles` if the table is missing, which helps new deployments bootstrap cleanly.
 
 ## Admin observability dashboard
 

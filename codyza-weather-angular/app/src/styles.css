@@ -347,6 +347,22 @@ button {
   margin-top: 4px;
 }
 
+.result-card__badge {
+  display: inline-flex;
+  width: fit-content;
+  margin-top: 10px;
+  padding: 6px 10px;
+  border-radius: 999px;
+  background: rgba(79, 209, 255, 0.12);
+  border: 1px solid rgba(79, 209, 255, 0.22);
+  color: var(--text-primary);
+  font-size: 0.82rem;
+}
+
+.search-helper {
+  margin: 12px 0 0;
+}
+
 .tag-section {
   margin-top: 18px;
 }
@@ -513,6 +529,28 @@ button {
 .saved-card,
 .comparison-card {
   padding: 16px;
+}
+
+.account-dashboard-grid {
+  margin-top: 18px;
+}
+
+.preference-grid {
+  display: grid;
+  gap: 12px;
+  margin-top: 14px;
+}
+
+.preference-toggle {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  color: var(--text-primary);
+}
+
+.preference-toggle input {
+  width: 16px;
+  height: 16px;
 }
 
 .daily-grid,

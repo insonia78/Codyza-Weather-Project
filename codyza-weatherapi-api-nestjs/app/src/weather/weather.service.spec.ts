@@ -46,6 +46,7 @@ describe('WeatherProviderService', () => {
         lon: 9.19,
         label: '45.464, 9.190',
         source: 'search',
+        category: 'coordinates',
       },
     ]);
   });
@@ -94,6 +95,8 @@ describe('WeatherProviderService', () => {
         lon: 8.723,
         label: 'Milan, Italy',
         source: 'search',
+        category: 'city',
+        airportCode: undefined,
       },
     ]);
   });
@@ -133,5 +136,94 @@ describe('WeatherProviderService', () => {
 
     expect(secondResult).toEqual(firstResult);
     expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it('prioritizes airport matches and annotates airport codes for airport-style queries', async () => {
+    global.fetch = vi
+      .fn()
+      .mockResolvedValueOnce({
+        ok: true,
+        text: vi.fn().mockResolvedValue(
+          JSON.stringify({
+            results: [
+              {
+                placeId: 'new-york-city',
+                location: {
+                  latitude: 40.7128,
+                  longitude: -74.006,
+                },
+                formattedAddress: 'New York, NY, USA',
+                addressComponents: [
+                  {
+                    longText: 'New York',
+                    types: ['locality'],
+                  },
+                  {
+                    longText: 'United States',
+                    types: ['country'],
+                  },
+                ],
+              },
+            ],
+          }),
+        ),
+      } as unknown as Response)
+      .mockResolvedValueOnce({
+        ok: true,
+        text: vi.fn().mockResolvedValue(
+          JSON.stringify({
+            results: [
+              {
+                placeId: 'jfk',
+                location: {
+                  latitude: 40.6413,
+                  longitude: -73.7781,
+                },
+                formattedAddress: 'John F. Kennedy International Airport, Queens, NY, USA',
+                addressComponents: [
+                  {
+                    longText: 'John F. Kennedy International Airport',
+                    shortText: 'JFK',
+                    types: ['airport'],
+                  },
+                  {
+                    longText: 'United States',
+                    types: ['country'],
+                  },
+                ],
+                types: ['airport'],
+              },
+            ],
+          }),
+        ),
+      } as unknown as Response);
+
+    const service = new WeatherProviderService(new CacheMetricsService());
+
+    await expect(service.searchLocations('JFK')).resolves.toEqual([
+      {
+        id: '40.641:-73.778',
+        name: 'John F. Kennedy International Airport (JFK)',
+        state: undefined,
+        country: 'United States',
+        lat: 40.6413,
+        lon: -73.7781,
+        label: 'John F. Kennedy International Airport, Queens, NY, USA (JFK)',
+        source: 'search',
+        category: 'airport',
+        airportCode: 'JFK',
+      },
+      {
+        id: '40.713:-74.006',
+        name: 'New York',
+        state: undefined,
+        country: 'United States',
+        lat: 40.7128,
+        lon: -74.006,
+        label: 'New York, NY, USA',
+        source: 'search',
+        category: 'city',
+      },
+    ]);
   });
 });

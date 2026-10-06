@@ -1,29 +1,16 @@
 import {
   Injectable,
-  InternalServerErrorException,
-  OnModuleDestroy,
-  ServiceUnavailableException,
 } from '@nestjs/common';
-import { Pool, type QueryResult, type QueryResultRow } from 'pg';
 
+import { WeatherDatabaseService, type WeatherDatabaseQueryClient } from '../persistence/weather-database.service.js';
 import type { WeatherLocation } from '../weather/weather.models.js';
 import type { SaveSearchHistoryRequestBody, SearchHistoryRow } from './search-history.models.js';
 
 const maxRecentSearches = 8;
-const searchHistoryDatabaseUrlEnvVar = 'WEATHER_SEARCH_HISTORY_DATABASE_URL';
-const fallbackDatabaseUrlEnvVar = 'DATABASE_URL';
-
-interface SearchHistoryQueryClient {
-  query<T extends QueryResultRow>(
-    queryText: string,
-    values?: ReadonlyArray<unknown>,
-  ): Promise<QueryResult<T>>;
-  end?(): Promise<void>;
-}
 
 @Injectable()
-export class SearchHistoryService implements OnModuleDestroy {
-  private pool: Pool | null = null;
+export class SearchHistoryService {
+  constructor(private readonly databaseService: WeatherDatabaseService) {}
 
   async listRecentSearches(userEmail: string, limit = maxRecentSearches): Promise<WeatherLocation[]> {
     const safeLimit = this.normalizeLimit(limit);
@@ -120,49 +107,8 @@ export class SearchHistoryService implements OnModuleDestroy {
     );
   }
 
-  async onModuleDestroy(): Promise<void> {
-    if (this.pool?.end) {
-      await this.pool.end();
-      this.pool = null;
-    }
-  }
-
-  protected getDatabaseClient(): SearchHistoryQueryClient {
-    if (this.pool) {
-      return this.pool;
-    }
-
-    const databaseUrl = process.env[searchHistoryDatabaseUrlEnvVar] ?? process.env[fallbackDatabaseUrlEnvVar];
-    if (!databaseUrl) {
-      throw new ServiceUnavailableException(
-        `Missing ${searchHistoryDatabaseUrlEnvVar} or ${fallbackDatabaseUrlEnvVar} environment variable.`,
-      );
-    }
-
-    try {
-      this.pool = new Pool({
-        connectionString: databaseUrl,
-        max: 10,
-        ssl: this.shouldUseSsl(databaseUrl) ? { rejectUnauthorized: false } : undefined,
-      });
-    } catch (error) {
-      const message = error instanceof Error ? error.message : String(error);
-      throw new InternalServerErrorException(`Failed to initialize search history database client: ${message}`);
-    }
-
-    return this.pool;
-  }
-
-  private shouldUseSsl(connectionString: string): boolean {
-    try {
-      const parsedUrl = new URL(connectionString);
-      const sslMode = parsedUrl.searchParams.get('sslmode');
-      return parsedUrl.hostname !== 'localhost' &&
-        parsedUrl.hostname !== '127.0.0.1' &&
-        sslMode !== 'disable';
-    } catch {
-      return true;
-    }
+  protected getDatabaseClient(): WeatherDatabaseQueryClient {
+    return this.databaseService.getClient();
   }
 
   private mapRowToLocation(row: SearchHistoryRow): WeatherLocation {

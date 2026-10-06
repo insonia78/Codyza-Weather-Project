@@ -2,6 +2,7 @@ export type TemperatureUnit = 'celsius' | 'fahrenheit';
 export type MeasurementSystem = 'metric' | 'imperial';
 export type MapLayerKey = 'clouds_new' | 'precipitation_new' | 'temp_new' | 'wind_new';
 export type LocationSource = 'search' | 'favorite' | 'recent' | 'geolocation' | 'map';
+export type LocationCategory = 'city' | 'airport' | 'postal_code' | 'address' | 'coordinates';
 
 export interface WeatherLocation {
   id: string;
@@ -12,6 +13,28 @@ export interface WeatherLocation {
   lon: number;
   label: string;
   source: LocationSource;
+  category?: LocationCategory;
+  airportCode?: string;
+}
+
+export interface NotificationPreferences {
+  dailySummary: boolean;
+  severeWeather: boolean;
+  airQuality: boolean;
+  weekendOutlook: boolean;
+}
+
+export interface WeatherUserProfile {
+  email: string;
+  favorites: WeatherLocation[];
+  comparisonLocations: WeatherLocation[];
+  recentSearches: WeatherLocation[];
+  temperatureUnit: TemperatureUnit;
+  measurementSystem: MeasurementSystem;
+  selectedMapLayer: MapLayerKey;
+  autoRefresh: boolean;
+  notificationPreferences: NotificationPreferences;
+  updatedAt: string | null;
 }
 
 export interface PersistedSettings {

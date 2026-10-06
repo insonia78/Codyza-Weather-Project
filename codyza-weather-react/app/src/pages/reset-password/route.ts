@@ -1,5 +1,6 @@
 import React from 'react';
 import type { ActionFunctionArgs, RouteObject } from 'react-router-dom';
+import { redirectIfAdministrator } from '../admin-handoff';
 import ResetPasswordPage from './index';
 import { validateResetPasswordForm } from './functions';
 
@@ -11,19 +12,31 @@ export type ResetPasswordActionData = {
 	};
 };
 
-export async function resetPasswordAction({ request }: ActionFunctionArgs): Promise<ResetPasswordActionData> {
+export async function resetPasswordAction({ request }: ActionFunctionArgs): Promise<ResetPasswordActionData | Response> {
 	const formData = await request.formData();
 	const email = String(formData.get('email') ?? '');
-	const errors = validateResetPasswordForm({ email });
 
-	if (errors.length > 0) {
+	if (!email.trim()) {
 		return {
-			errors,
+			errors: ['Email is required.'],
 			values: { email },
 		};
 	}
 
 	try {
+    const adminRedirect = await redirectIfAdministrator(email);
+    if (adminRedirect) {
+      return adminRedirect;
+    }
+
+    const errors = validateResetPasswordForm({ email });
+    if (errors.length > 0) {
+      return {
+        errors,
+        values: { email },
+      };
+    }
+
     const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/accounts/reset-password`, {
       method: "POST",
       body: JSON.stringify({ email }),
@@ -41,7 +54,7 @@ export async function resetPasswordAction({ request }: ActionFunctionArgs): Prom
   } catch (error) {
     console.error("Password reset request failed:", error);
     return {
-      errors: ["Password reset request failed. Please try again."],
+      errors: [error instanceof Error ? error.message : "Password reset request failed. Please try again."],
       values: { email },
     };
   }

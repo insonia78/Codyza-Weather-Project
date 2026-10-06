@@ -6,12 +6,31 @@ import { provideStore, provideState } from '@ngrx/store';
 import { of, Subject, throwError } from 'rxjs';
 
 import { AppComponent } from './app.component';
+import { WeatherUserProfile } from './models/weather.models';
 import { WeatherService } from './services/weather.service';
 import { WeatherEffects } from './store/weather/weather.effects';
 import { weatherFeature } from './store/weather/weather.feature';
 import { WEATHER_STORAGE_KEYS } from './store/weather/weather-storage.keys';
 
 describe('AppComponent', () => {
+  const defaultProfile: WeatherUserProfile = {
+    email: 'weather.user@example.com',
+    favorites: [],
+    comparisonLocations: [],
+    recentSearches: [],
+    temperatureUnit: 'celsius',
+    measurementSystem: 'metric',
+    selectedMapLayer: 'clouds_new',
+    autoRefresh: true,
+    notificationPreferences: {
+      dailySummary: true,
+      severeWeather: true,
+      airQuality: false,
+      weekendOutlook: false,
+    },
+    updatedAt: null,
+  };
+
   function createJwtToken(payload: Record<string, unknown>): string {
     const encodedPayload = btoa(JSON.stringify(payload)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
     return `header.${encodedPayload}.signature`;
@@ -29,6 +48,10 @@ describe('AppComponent', () => {
         provideEffects(WeatherEffects)
       ]
     }).compileComponents();
+
+    const weatherService = TestBed.inject(WeatherService);
+    spyOn(weatherService, 'getSearchHistory').and.returnValue(of([]));
+    spyOn(weatherService, 'getUserProfile').and.returnValue(of(defaultProfile));
   });
 
   it('should create the app', () => {
@@ -55,8 +78,6 @@ describe('AppComponent', () => {
     localStorage.setItem('jwt_token', createJwtToken({ email: 'weather.user@example.com' }));
 
     const fixture = TestBed.createComponent(AppComponent);
-    const weatherService = TestBed.inject(WeatherService);
-    spyOn(weatherService, 'getSearchHistory').and.returnValue(of([]));
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
@@ -69,8 +90,6 @@ describe('AppComponent', () => {
     localStorage.setItem('jwt_token', createJwtToken({ email: 'weather.user@example.com' }));
 
     const fixture = TestBed.createComponent(AppComponent);
-    const weatherService = TestBed.inject(WeatherService);
-    spyOn(weatherService, 'getSearchHistory').and.returnValue(of([]));
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
@@ -96,8 +115,6 @@ describe('AppComponent', () => {
     localStorage.setItem('jwt_token', createJwtToken({ email: 'weather.user@example.com' }));
 
     const fixture = TestBed.createComponent(AppComponent);
-    const weatherService = TestBed.inject(WeatherService);
-    spyOn(weatherService, 'getSearchHistory').and.returnValue(of([]));
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
@@ -151,7 +168,6 @@ describe('AppComponent', () => {
     const redirectSpy = spyOn<any>(app, 'redirectToRootApp').and.stub();
     const weatherService = TestBed.inject(WeatherService);
     spyOn(weatherService, 'logout').and.returnValue(of({ revoked: true }));
-    spyOn(weatherService, 'getSearchHistory').and.returnValue(of([]));
 
     localStorage.setItem(WEATHER_STORAGE_KEYS.favorites, JSON.stringify([{ id: '1' }]));
     localStorage.setItem('jwt_token', 'token');
@@ -179,7 +195,6 @@ describe('AppComponent', () => {
     const redirectSpy = spyOn<any>(app, 'redirectToRootApp').and.stub();
     const weatherService = TestBed.inject(WeatherService);
     spyOn(weatherService, 'logout').and.returnValue(throwError(() => new Error('Token revocation failed.')));
-    spyOn(weatherService, 'getSearchHistory').and.returnValue(of([]));
 
     localStorage.setItem('jwt_token', 'token');
 
@@ -202,7 +217,6 @@ describe('AppComponent', () => {
     const logoutSubject = new Subject<{ revoked: boolean }>();
     const weatherService = TestBed.inject(WeatherService);
     spyOn(weatherService, 'logout').and.returnValue(logoutSubject.asObservable());
-    spyOn(weatherService, 'getSearchHistory').and.returnValue(of([]));
 
     localStorage.setItem('jwt_token', 'token');
 

@@ -4,7 +4,13 @@ import { Observable, throwError } from 'rxjs';
 import { catchError } from 'rxjs/operators';
 
 import { environment } from '../../environments/environment';
-import { MapLayerKey, WeatherDashboard, WeatherLocation } from '../models/weather.models';
+import {
+  MapLayerKey,
+  NotificationPreferences,
+  WeatherDashboard,
+  WeatherLocation,
+  WeatherUserProfile
+} from '../models/weather.models';
 
 @Injectable({
   providedIn: 'root'
@@ -73,6 +79,32 @@ export class WeatherService {
       queryText
     }).pipe(
       catchError((error: HttpErrorResponse) => this.handleBackendError('Saving search history', error))
+    );
+  }
+
+  clearSearchHistory(): Observable<{ cleared: boolean }> {
+    return this.http.delete<{ cleared: boolean }>(`${this.apiBaseUrl}/search-history`).pipe(
+      catchError((error: HttpErrorResponse) => this.handleBackendError('Clearing search history', error))
+    );
+  }
+
+  getUserProfile(): Observable<WeatherUserProfile> {
+    return this.http.get<WeatherUserProfile>(`${this.apiBaseUrl}/profile`).pipe(
+      catchError((error: HttpErrorResponse) => this.handleBackendError('Protected dashboard', error))
+    );
+  }
+
+  saveUserProfile(profile: {
+    favorites: WeatherLocation[];
+    comparisonLocations: WeatherLocation[];
+    temperatureUnit: WeatherUserProfile['temperatureUnit'];
+    measurementSystem: WeatherUserProfile['measurementSystem'];
+    selectedMapLayer: WeatherUserProfile['selectedMapLayer'];
+    autoRefresh: boolean;
+    notificationPreferences: NotificationPreferences;
+  }): Observable<WeatherUserProfile> {
+    return this.http.put<WeatherUserProfile>(`${this.apiBaseUrl}/profile`, profile).pipe(
+      catchError((error: HttpErrorResponse) => this.handleBackendError('Saving protected dashboard settings', error))
     );
   }
 

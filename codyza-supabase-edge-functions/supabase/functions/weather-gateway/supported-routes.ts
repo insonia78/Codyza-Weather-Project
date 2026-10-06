@@ -110,5 +110,12 @@ export const supportedRoutes = [
       "POST",
       "DELETE"
     ]
+  },
+  {
+    pattern: /^\/weather\/profile\/?$/,
+    methods: [
+      "GET",
+      "PUT"
+    ]
   }
 ];

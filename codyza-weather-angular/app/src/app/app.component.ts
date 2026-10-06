@@ -2,7 +2,7 @@ import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
 import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild, computed } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
-import { Subscription, combineLatest, fromEvent, interval } from 'rxjs';
+import { Subject, Subscription, combineLatest, debounceTime, distinctUntilChanged, fromEvent, interval, switchMap } from 'rxjs';
 
 import { environment } from '../environments/environment';
 import {
@@ -12,10 +12,12 @@ import {
   HourlyForecastPoint,
   MapLayerKey,
   MeasurementSystem,
+  NotificationPreferences,
   PersistedSettings,
   TemperatureUnit,
   WeatherDashboard,
-  WeatherLocation
+  WeatherLocation,
+  WeatherUserProfile
 } from './models/weather.models';
 import { LocalStorageService } from './services/local-storage.service';
 import { WeatherStore } from './services/weather-store.service';
@@ -26,8 +28,16 @@ import { StatusBannerComponent } from './components/status-banner.component';
 
 type LayerOption = { key: MapLayerKey; label: string };
 type MarkerVariant = 'circle' | 'pin';
+type NotificationPreferenceKey = keyof NotificationPreferences;
 
 let googleMapsScriptPromise: Promise<void> | null = null;
+
+const defaultNotificationPreferences: NotificationPreferences = {
+  dailySummary: true,
+  severeWeather: true,
+  airQuality: false,
+  weekendOutlook: false
+};
 
 function decodeJwtPayload(token: string): Record<string, unknown> | null {
   const segments = token.split('.');
@@ -116,8 +126,16 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly localTimestampState = computed(() => this.appState().localTimestamp);
   private readonly temperatureUnitState = computed(() => this.appState().temperatureUnit);
   private readonly measurementSystemState = computed(() => this.appState().measurementSystem);
+  private readonly searchInput$ = new Subject<string>();
+  private readonly profileSaveRequests$ = new Subject<void>();
   private logoutInProgress = false;
   private notificationPanelOpen = false;
+  private notificationPreferencesState: NotificationPreferences = { ...defaultNotificationPreferences };
+  private profileSyncInProgress = false;
+  private profileSyncStateMessage = '';
+  private profileUpdatedAt: string | null = null;
+  private hydratingProfile = false;
+  private observedComparisonSnapshots = false;
 
   constructor(
     private readonly weatherService: WeatherService,
@@ -228,14 +246,49 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
       return [];
     }
 
-    return [
+    const items = [
       `Signed in as ${this.loggedInEmail}.`,
-      'Weather alerts and account notifications will appear here.',
+      `Daily summary notifications are ${this.notificationPreferences.dailySummary ? 'enabled' : 'disabled'}.`,
+      `Severe weather notifications are ${this.notificationPreferences.severeWeather ? 'enabled' : 'disabled'}.`,
     ];
+
+    if (this.profileSyncStateMessage) {
+      items.push(this.profileSyncStateMessage);
+    }
+
+    return items;
   }
 
   get autoRefresh(): boolean {
     return this.appState().autoRefresh;
+  }
+
+  get notificationPreferences(): NotificationPreferences {
+    return this.notificationPreferencesState;
+  }
+
+  get isProfileSyncInProgress(): boolean {
+    return this.profileSyncInProgress;
+  }
+
+  get profileSyncMessage(): string {
+    if (!this.loggedInEmail) {
+      return 'Sign in through the Codyza account flow to sync preferences, favorites, and comparisons.';
+    }
+
+    if (this.profileSyncStateMessage) {
+      return this.profileSyncStateMessage;
+    }
+
+    return 'Profile settings sync automatically through the gateway.';
+  }
+
+  get protectedDashboardLastUpdated(): string {
+    if (!this.profileUpdatedAt) {
+      return 'Not synced yet';
+    }
+
+    return new Date(this.profileUpdatedAt).toLocaleString();
   }
 
   get localTimestamp(): number {
@@ -301,7 +354,9 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   });
   ngOnInit(): void {
     this.restoreState();
-    this.loadBackendSearchHistory();
+    this.registerAutocompleteSearch();
+    this.registerProtectedDashboardSync();
+    this.loadProtectedDashboard();
     this.registerConnectivity();
     this.startClock();
     this.configureAutoRefresh();
@@ -314,6 +369,8 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
 
   ngOnDestroy(): void {
     this.autoRefreshSubscription?.unsubscribe();
+    this.searchInput$.complete();
+    this.profileSaveRequests$.complete();
     this.subscriptions.unsubscribe();
     this.clearGoogleMarkers();
     this.mapClickListener?.remove();
@@ -329,7 +386,10 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     if (query.trim().length < 2) {
       this.weatherStore.clearSearchResults();
       this.weatherStore.setSearchLoading(false);
+      return;
     }
+
+    this.searchInput$.next(query);
   }
 
   triggerSearch(): void {
@@ -371,6 +431,11 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   resetApp(): void {
     this.weatherStore.resetState();
     this.initialMapCentered = false;
+    this.notificationPreferencesState = { ...defaultNotificationPreferences };
+    this.profileSyncStateMessage = '';
+    this.profileUpdatedAt = null;
+    this.profileSyncInProgress = false;
+    this.hydratingProfile = false;
     this.clearGoogleMarkers();
 
     if (this.map) {
@@ -448,8 +513,8 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     this.logoutInProgress = false;
     this.notificationPanelOpen = false;
     this.weatherStore.setApiMessage('');
-    this.resetApp();
     localStorage.removeItem('jwt_token');
+    this.resetApp();
     this.redirectToRootApp();
   }
 
@@ -468,12 +533,14 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
 
     this.weatherStore.setFavorites(favorites);
     this.syncMapMarkers();
+    this.scheduleProfileSync();
   }
 
   removeFavorite(location: WeatherLocation): void {
     const favorites = this.favorites.filter((entry) => entry.id !== location.id);
     this.weatherStore.setFavorites(favorites);
     this.syncMapMarkers();
+    this.scheduleProfileSync();
   }
 
   addToComparison(location: WeatherLocation): void {
@@ -484,24 +551,67 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     this.weatherStore.setComparisonSnapshots(
       this.comparisonSnapshots.filter((entry) => entry.location.id !== locationId)
     );
+    this.scheduleProfileSync();
   }
 
   setTemperatureUnit(unit: TemperatureUnit): void {
     this.weatherStore.setTemperatureUnit(unit);
+    this.scheduleProfileSync();
   }
 
   setMeasurementSystem(system: MeasurementSystem): void {
     this.weatherStore.setMeasurementSystem(system);
+    this.scheduleProfileSync();
   }
 
   setMapLayer(layer: MapLayerKey): void {
     this.weatherStore.setSelectedMapLayer(layer);
     this.updateWeatherLayer();
+    this.scheduleProfileSync();
   }
 
   setAutoRefresh(autoRefresh: boolean): void {
     this.weatherStore.setAutoRefresh(autoRefresh);
     this.configureAutoRefresh();
+    this.scheduleProfileSync();
+  }
+
+  setNotificationPreference(preference: NotificationPreferenceKey, enabled: boolean): void {
+    this.notificationPreferencesState = {
+      ...this.notificationPreferencesState,
+      [preference]: enabled
+    };
+    this.scheduleProfileSync();
+  }
+
+  syncProtectedDashboard(): void {
+    if (!this.loggedInEmail || this.profileSyncInProgress) {
+      return;
+    }
+
+    this.profileSaveRequests$.next();
+  }
+
+  clearRecentSearchHistory(): void {
+    if (!this.loggedInEmail) {
+      return;
+    }
+
+    this.profileSyncInProgress = true;
+    this.profileSyncStateMessage = 'Clearing synced recent searches...';
+    this.weatherService.clearSearchHistory().subscribe({
+      next: () => {
+        this.weatherStore.setRecentSearches([]);
+        this.profileSyncInProgress = false;
+        this.profileUpdatedAt = new Date().toISOString();
+        this.profileSyncStateMessage = 'Recent searches were cleared from your protected dashboard.';
+      },
+      error: (error: Error) => {
+        this.profileSyncInProgress = false;
+        this.profileSyncStateMessage = `Could not clear recent searches: ${error.message}`;
+        this.weatherStore.appendWarningMessage(this.profileSyncStateMessage);
+      }
+    });
   }
 
   isFavorite(location: WeatherLocation): boolean {
@@ -582,6 +692,26 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
 
   formatAirComponentValue(value: number): string {
     return `${value.toFixed(1)} ug/m3`;
+  }
+
+  locationBadge(location: WeatherLocation): string {
+    if (location.category === 'airport') {
+      return location.airportCode ? `Airport · ${location.airportCode}` : 'Airport';
+    }
+
+    if (location.category === 'postal_code') {
+      return 'Postal code';
+    }
+
+    if (location.category === 'coordinates') {
+      return 'Coordinates';
+    }
+
+    if (location.category === 'address') {
+      return 'Address';
+    }
+
+    return 'City';
   }
 
   isWeatherIconUrl(iconCode: string): boolean {
@@ -749,11 +879,87 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     }
   }
 
-  private loadBackendSearchHistory(): void {
+  private registerAutocompleteSearch(): void {
+    this.subscriptions.add(
+      this.searchInput$.pipe(
+        debounceTime(250),
+        distinctUntilChanged(),
+      ).subscribe((query) => {
+        const normalizedQuery = query.trim();
+        if (normalizedQuery.length >= 2) {
+          this.weatherStore.searchLocations(normalizedQuery);
+        }
+      })
+    );
+  }
+
+  private registerProtectedDashboardSync(): void {
+    this.subscriptions.add(
+      this.weatherStore.comparisonSnapshots$.pipe(
+        distinctUntilChanged((left, right) =>
+          left.length === right.length &&
+          left.every((entry, index) => entry.location.id === right[index]?.location.id)
+        )
+      ).subscribe(() => {
+        if (!this.observedComparisonSnapshots) {
+          this.observedComparisonSnapshots = true;
+          return;
+        }
+
+        this.scheduleProfileSync();
+      })
+    );
+
+    this.subscriptions.add(
+      this.profileSaveRequests$.pipe(
+        debounceTime(400),
+        switchMap(() => this.weatherService.saveUserProfile({
+          favorites: this.favorites,
+          comparisonLocations: this.comparisonSnapshots.map((entry) => entry.location),
+          temperatureUnit: this.temperatureUnit,
+          measurementSystem: this.measurementSystem,
+          selectedMapLayer: this.selectedMapLayer,
+          autoRefresh: this.autoRefresh,
+          notificationPreferences: this.notificationPreferencesState
+        }))
+      ).subscribe({
+        next: (profile) => {
+          this.profileSyncInProgress = false;
+          this.profileSyncStateMessage = 'Protected dashboard synced through the gateway.';
+          this.applyProtectedDashboardProfile(profile);
+        },
+        error: (error: Error) => {
+          this.profileSyncInProgress = false;
+          this.profileSyncStateMessage = `Protected dashboard sync failed: ${error.message}`;
+          this.weatherStore.appendWarningMessage(this.profileSyncStateMessage);
+        }
+      })
+    );
+  }
+
+  private loadProtectedDashboard(): void {
     if (typeof window === 'undefined' || !window.localStorage.getItem('jwt_token')) {
       return;
     }
 
+    this.profileSyncInProgress = true;
+    this.profileSyncStateMessage = 'Loading protected dashboard...';
+    this.weatherService.getUserProfile().subscribe({
+      next: (profile) => {
+        this.profileSyncInProgress = false;
+        this.profileSyncStateMessage = 'Protected dashboard connected.';
+        this.applyProtectedDashboardProfile(profile);
+      },
+      error: (error: Error) => {
+        this.profileSyncInProgress = false;
+        this.profileSyncStateMessage = `Protected dashboard could not be loaded: ${error.message}`;
+        this.weatherStore.appendWarningMessage(this.profileSyncStateMessage);
+        this.loadBackendSearchHistory();
+      }
+    });
+  }
+
+  private loadBackendSearchHistory(): void {
     this.weatherService.getSearchHistory().subscribe({
       next: (recentSearches) => {
         this.weatherStore.setRecentSearches(recentSearches);
@@ -764,6 +970,42 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
         );
       }
     });
+  }
+
+  private applyProtectedDashboardProfile(profile: WeatherUserProfile): void {
+    this.hydratingProfile = true;
+    this.notificationPreferencesState = {
+      ...defaultNotificationPreferences,
+      ...profile.notificationPreferences
+    };
+    this.profileUpdatedAt = profile.updatedAt;
+    this.weatherStore.hydrateState({
+      favorites: profile.favorites,
+      recentSearches: profile.recentSearches,
+      temperatureUnit: profile.temperatureUnit,
+      measurementSystem: profile.measurementSystem,
+      selectedMapLayer: profile.selectedMapLayer,
+      autoRefresh: profile.autoRefresh
+    });
+    this.weatherStore.setComparisonSnapshots([]);
+    this.configureAutoRefresh();
+    this.updateWeatherLayer();
+
+    if (this.hasApiKey) {
+      profile.comparisonLocations.forEach((location) => this.weatherStore.addComparisonLocation(location));
+    }
+
+    this.hydratingProfile = false;
+  }
+
+  private scheduleProfileSync(): void {
+    if (!this.loggedInEmail || this.hydratingProfile) {
+      return;
+    }
+
+    this.profileSyncInProgress = true;
+    this.profileSyncStateMessage = 'Syncing protected dashboard...';
+    this.profileSaveRequests$.next();
   }
 
   private async initializeMap(): Promise<void> {

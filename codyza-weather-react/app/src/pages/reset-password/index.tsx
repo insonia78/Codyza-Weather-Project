@@ -20,7 +20,7 @@ const ResetPassword = () => {
       <CodyzaBranding compact showPoweredBy={false} />
       <p className={styles.eyebrow}>Account recovery</p>
       <h1 className={styles.title}>Reset Password</h1>
-      <p className={styles.description}>Enter your email and we will guide you back into your account.</p>
+      <p className={styles.description}>Enter your email and we will guide you back into your account. Administrator emails are redirected to the Codyza Weather administration password setup flow.</p>
        {errors.length > 0 && (
         <div className={styles.errorBox}>
           <h2>Validation Errors:</h2>
