@@ -55,6 +55,8 @@ describe('AppComponent', () => {
     localStorage.setItem('jwt_token', createJwtToken({ email: 'weather.user@example.com' }));
 
     const fixture = TestBed.createComponent(AppComponent);
+    const weatherService = TestBed.inject(WeatherService);
+    spyOn(weatherService, 'getSearchHistory').and.returnValue(of([]));
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
@@ -67,6 +69,8 @@ describe('AppComponent', () => {
     localStorage.setItem('jwt_token', createJwtToken({ email: 'weather.user@example.com' }));
 
     const fixture = TestBed.createComponent(AppComponent);
+    const weatherService = TestBed.inject(WeatherService);
+    spyOn(weatherService, 'getSearchHistory').and.returnValue(of([]));
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
@@ -92,6 +96,8 @@ describe('AppComponent', () => {
     localStorage.setItem('jwt_token', createJwtToken({ email: 'weather.user@example.com' }));
 
     const fixture = TestBed.createComponent(AppComponent);
+    const weatherService = TestBed.inject(WeatherService);
+    spyOn(weatherService, 'getSearchHistory').and.returnValue(of([]));
     fixture.detectChanges();
 
     const compiled = fixture.nativeElement as HTMLElement;
@@ -145,6 +151,7 @@ describe('AppComponent', () => {
     const redirectSpy = spyOn<any>(app, 'redirectToRootApp').and.stub();
     const weatherService = TestBed.inject(WeatherService);
     spyOn(weatherService, 'logout').and.returnValue(of({ revoked: true }));
+    spyOn(weatherService, 'getSearchHistory').and.returnValue(of([]));
 
     localStorage.setItem(WEATHER_STORAGE_KEYS.favorites, JSON.stringify([{ id: '1' }]));
     localStorage.setItem('jwt_token', 'token');
@@ -172,6 +179,7 @@ describe('AppComponent', () => {
     const redirectSpy = spyOn<any>(app, 'redirectToRootApp').and.stub();
     const weatherService = TestBed.inject(WeatherService);
     spyOn(weatherService, 'logout').and.returnValue(throwError(() => new Error('Token revocation failed.')));
+    spyOn(weatherService, 'getSearchHistory').and.returnValue(of([]));
 
     localStorage.setItem('jwt_token', 'token');
 
@@ -194,6 +202,7 @@ describe('AppComponent', () => {
     const logoutSubject = new Subject<{ revoked: boolean }>();
     const weatherService = TestBed.inject(WeatherService);
     spyOn(weatherService, 'logout').and.returnValue(logoutSubject.asObservable());
+    spyOn(weatherService, 'getSearchHistory').and.returnValue(of([]));
 
     localStorage.setItem('jwt_token', 'token');
 

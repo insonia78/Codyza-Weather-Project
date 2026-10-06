@@ -72,6 +72,38 @@ The weather API now uses an in-memory cache manager for provider responses. The 
 
 `forceRefresh: true` on the dashboard request still bypasses cached provider data and fetches fresh weather details.
 
+## Search history persistence
+
+Recent searches are now handled by a dedicated Nest search-history service instead of being mixed into [weather.service.ts](./src/weather/weather.service.ts). The API surface is:
+
+- `GET /weather/search-history`
+- `POST /weather/search-history`
+- `DELETE /weather/search-history`
+
+These endpoints expect the authenticated user identity in the `X-User-Id` header that the gateway already forwards from the validated JWT subject.
+
+Set `WEATHER_SEARCH_HISTORY_DATABASE_URL` (or `DATABASE_URL`) so the search-history service can persist recent searches in PostgreSQL.
+
+```sql
+CREATE TABLE weather_search_history (
+  id BIGSERIAL PRIMARY KEY,
+  user_email VARCHAR(320) NOT NULL,
+  query_text VARCHAR(255),
+  location_id VARCHAR(255) NOT NULL,
+  location_name VARCHAR(255) NOT NULL,
+  state_region VARCHAR(255),
+  country VARCHAR(255) NOT NULL,
+  latitude DOUBLE PRECISION NOT NULL,
+  longitude DOUBLE PRECISION NOT NULL,
+  source VARCHAR(20) NOT NULL CHECK (source IN ('search', 'favorite', 'recent', 'geolocation', 'map')),
+  searched_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+  CONSTRAINT weather_search_history_user_location_unique UNIQUE (user_email, location_id)
+);
+
+CREATE INDEX idx_weather_search_history_user_email_searched_at
+  ON weather_search_history (user_email, searched_at DESC);
+```
+
 ## Deployment
 
 When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.

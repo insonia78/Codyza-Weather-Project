@@ -22,6 +22,7 @@ import {
   selectComparisonSnapshots,
   selectMeasurementSystem,
   selectRecentSearches,
+  selectSearchQuery,
   selectSelectedMapLayer,
   selectTemperatureUnit
 } from './weather.feature';
@@ -229,6 +230,29 @@ export class WeatherEffects {
       ofType(WeatherActions.setRecentSearches),
       tap(({ recentSearches }) => {
         this.storage.setItem(WEATHER_STORAGE_KEYS.recentSearches, recentSearches);
+      })
+    ),
+    { dispatch: false }
+  );
+
+  readonly syncRecentSearchesToBackend$ = createEffect(
+    () => this.actions$.pipe(
+      ofType(WeatherActions.setRecentSearches),
+      withLatestFrom(this.store.select(selectSearchQuery)),
+      switchMap(([{ recentSearches }, searchQuery]) => {
+        const latestSearch = recentSearches[0];
+        if (!latestSearch || typeof window === 'undefined' || !window.localStorage.getItem('jwt_token')) {
+          return EMPTY;
+        }
+
+        return this.weatherService.saveSearchHistory(latestSearch, searchQuery).pipe(
+          catchError((error: Error) => {
+            this.store.dispatch(WeatherActions.appendWarningMessage({
+              warningMessage: `Saved recent searches could not be synced to the backend: ${error.message}`
+            }));
+            return EMPTY;
+          })
+        );
       })
     ),
     { dispatch: false }

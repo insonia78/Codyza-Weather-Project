@@ -54,5 +54,13 @@ export const supportedRoutes = [
     methods: [
       "POST"
     ]
+  },
+  {
+    pattern: /^\/weather\/search-history\/?$/,
+    methods: [
+      "GET",
+      "POST",
+      "DELETE"
+    ]
   }
 ];

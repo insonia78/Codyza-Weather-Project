@@ -61,6 +61,21 @@ export class WeatherService {
     );
   }
 
+  getSearchHistory(): Observable<WeatherLocation[]> {
+    return this.http.get<WeatherLocation[]>(`${this.apiBaseUrl}/search-history`).pipe(
+      catchError((error: HttpErrorResponse) => this.handleBackendError('Search history', error))
+    );
+  }
+
+  saveSearchHistory(location: WeatherLocation, queryText: string): Observable<WeatherLocation[]> {
+    return this.http.post<WeatherLocation[]>(`${this.apiBaseUrl}/search-history`, {
+      location,
+      queryText
+    }).pipe(
+      catchError((error: HttpErrorResponse) => this.handleBackendError('Saving search history', error))
+    );
+  }
+
   logout(): Observable<{ revoked: boolean }> {
     return this.http.post<{ revoked: boolean }>(`${this.gatewayBaseUrl}/auth/logout`, {}).pipe(
       catchError((error: HttpErrorResponse) => this.handleBackendError('Logout', error))

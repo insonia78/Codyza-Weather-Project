@@ -299,6 +299,7 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   });
   ngOnInit(): void {
     this.restoreState();
+    this.loadBackendSearchHistory();
     this.registerConnectivity();
     this.startClock();
     this.configureAutoRefresh();
@@ -744,6 +745,23 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     if (this.hasApiKey) {
       comparisonLocations.forEach((location) => this.addToComparison(location));
     }
+  }
+
+  private loadBackendSearchHistory(): void {
+    if (typeof window === 'undefined' || !window.localStorage.getItem('jwt_token')) {
+      return;
+    }
+
+    this.weatherService.getSearchHistory().subscribe({
+      next: (recentSearches) => {
+        this.weatherStore.setRecentSearches(recentSearches);
+      },
+      error: (error: Error) => {
+        this.weatherStore.appendWarningMessage(
+          `Saved recent searches could not be loaded from the backend: ${error.message}`
+        );
+      }
+    });
   }
 
   private async initializeMap(): Promise<void> {
