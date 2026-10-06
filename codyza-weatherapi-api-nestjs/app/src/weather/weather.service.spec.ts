@@ -1,4 +1,5 @@
 import { WeatherProviderService } from './weather.service.js';
+import { CacheMetricsService } from '../admin/cache-metrics.service.js';
 
 describe('WeatherProviderService', () => {
   const originalFetch = global.fetch;
@@ -26,7 +27,7 @@ describe('WeatherProviderService', () => {
   it('returns an empty result set when the geocoder omits results for a text search', async () => {
     global.fetch = vi.fn().mockResolvedValue(createFetchResponse('{}'));
 
-    const service = new WeatherProviderService();
+    const service = new WeatherProviderService(new CacheMetricsService());
 
     await expect(service.searchLocations('Milan')).resolves.toEqual([]);
   });
@@ -34,7 +35,7 @@ describe('WeatherProviderService', () => {
   it('returns the coordinate fallback when reverse geocoding omits results', async () => {
     global.fetch = vi.fn().mockResolvedValue(createFetchResponse('{}'));
 
-    const service = new WeatherProviderService();
+    const service = new WeatherProviderService(new CacheMetricsService());
 
     await expect(service.reverseGeocode(45.4642, 9.19, 'search')).resolves.toEqual([
       {
@@ -81,7 +82,7 @@ describe('WeatherProviderService', () => {
       } as unknown as Response)
       .mockResolvedValueOnce(createFetchResponse('{}'));
 
-    const service = new WeatherProviderService();
+    const service = new WeatherProviderService(new CacheMetricsService());
 
     await expect(service.searchLocations('MXP')).resolves.toEqual([
       {
@@ -125,7 +126,7 @@ describe('WeatherProviderService', () => {
       ),
     );
 
-    const service = new WeatherProviderService();
+    const service = new WeatherProviderService(new CacheMetricsService());
 
     const firstResult = await service.searchLocations('Milan');
     const secondResult = await service.searchLocations(' Milan ');

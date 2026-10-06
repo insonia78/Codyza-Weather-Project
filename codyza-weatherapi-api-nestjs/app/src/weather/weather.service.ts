@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { type Cache, createCache } from 'cache-manager';
 
+import { CacheMetricsService } from '../admin/cache-metrics.service.js';
 import {
   CurrentConditionsHistorySummary,
   DailyForecastPoint,
@@ -196,6 +197,8 @@ export class WeatherProviderService {
   private readonly cacheManager: Cache = createCache();
   private readonly pendingRequests = new Map<string, Promise<unknown>>();
   private readonly requestTimestamps: number[] = [];
+
+  constructor(private readonly cacheMetricsService: CacheMetricsService) {}
 
   get apiKeyConfigured(): boolean {
     return Boolean(this.googleWeatherApiKey);
@@ -453,13 +456,22 @@ export class WeatherProviderService {
 
   private async readCache<T>(cacheKey: string, forceRefresh: boolean): Promise<T | null> {
     if (forceRefresh) {
+      this.cacheMetricsService.registerBypass();
       return null;
     }
 
-    return await this.cacheManager.get<T>(cacheKey) ?? null;
+    const cachedValue = await this.cacheManager.get<T>(cacheKey) ?? null;
+    if (cachedValue === null) {
+      this.cacheMetricsService.registerMiss();
+    } else {
+      this.cacheMetricsService.registerHit();
+    }
+
+    return cachedValue;
   }
 
   private async writeCache<T>(cacheKey: string, value: T, ttlMs: number): Promise<void> {
+    this.cacheMetricsService.registerWrite();
     await this.cacheManager.set(cacheKey, value, ttlMs);
   }
 

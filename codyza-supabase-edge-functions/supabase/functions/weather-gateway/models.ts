@@ -1,5 +1,6 @@
 export enum SERVICES {
   ACCOUNTS = "accounts",
   WEATHER = "weather",
-  AUTH = "auth"
+  AUTH = "auth",
+  ADMIN = "admin"
 }

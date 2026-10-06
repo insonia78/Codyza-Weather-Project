@@ -45,6 +45,7 @@ const weatherApiUrl =
 const jwtCreatorUrl = Deno.env.get("JWT_CREATOR_URL");
 const jwtValidatorUrl = Deno.env.get("JWT_VALIDATOR_URL");
 const gatewayInternalSecret = Deno.env.get("WEATHER_GATEWAY_INTERNAL_SECRET");
+const adminDashboardGatewaySecret = Deno.env.get("ADMIN_DASHBOARD_GATEWAY_SECRET");
 const CONTAINER_HOSTNAME = "host.docker.internal";
 
 type LogLevel = "info" | "warn" | "error";
@@ -134,6 +135,7 @@ function getConfiguredBackendsSummary() {
     hasJwtCreatorUrl: Boolean(jwtCreatorUrl),
     hasJwtRevokeUrl: Boolean(jwtRevokeUrl),
     hasGatewayInternalSecret: Boolean(gatewayInternalSecret),
+    hasAdminDashboardGatewaySecret: Boolean(adminDashboardGatewaySecret),
     registrationBackend: registrationApiUrl ? summarizeBackendUrl(registrationApiUrl) : null,
     weatherBackend: weatherApiUrl ? summarizeBackendUrl(weatherApiUrl) : null,
     jwtRevokeBackend: jwtRevokeUrl ? summarizeBackendUrl(jwtRevokeUrl) : null,
@@ -245,6 +247,10 @@ function inferService(proxyPath: string): SERVICES | null {
     return SERVICES.ACCOUNTS;
   }
 
+  if (proxyPath.startsWith(`/${SERVICES.ADMIN}`)) {
+    return SERVICES.ADMIN;
+  }
+
   if (proxyPath.startsWith(`/${SERVICES.WEATHER}`)) {
     return SERVICES.WEATHER;
   }
@@ -259,6 +265,10 @@ function inferService(proxyPath: string): SERVICES | null {
 function resolveBackendUrl(service: SERVICES | null): string | null {
   if (service === SERVICES.ACCOUNTS) {
     return registrationApiUrl ?? null;
+  }
+
+  if (service === SERVICES.ADMIN) {
+    return weatherApiUrl ?? null;
   }
 
   if (service === SERVICES.WEATHER) {
@@ -342,6 +352,28 @@ function buildProxyHeaders(
   }
 
   return headers;
+}
+
+function authorizeAdminDashboardRequest(req: Request, jsonResponse: typeof jsonResponse, requestId: string) {
+  if (!adminDashboardGatewaySecret) {
+    logGatewayEvent("error", "admin.authorization.misconfigured", { requestId });
+    return jsonResponse(500, {
+      error: "Missing ADMIN_DASHBOARD_GATEWAY_SECRET environment variable",
+    }, req);
+  }
+
+  const providedSecret = req.headers.get("x-admin-dashboard-secret");
+  if (providedSecret !== adminDashboardGatewaySecret) {
+    logGatewayEvent("warn", "admin.authorization.failed", {
+      requestId,
+      hasProvidedSecret: Boolean(providedSecret),
+    });
+    return jsonResponse(403, {
+      error: "Admin dashboard access is forbidden",
+    }, req);
+  }
+
+  return null;
 }
 
 async function fetchBackendResponse(
@@ -581,6 +613,13 @@ export default {
           targetUrl: targetUrl.toString(),
           ...getHeaderPresence(req),
         });
+      }
+
+      if (service === SERVICES.ADMIN) {
+        const adminAuthorizationError = authorizeAdminDashboardRequest(req, jsonResponse, requestId);
+        if (adminAuthorizationError) {
+          return adminAuthorizationError;
+        }
       }
 
       if (service === SERVICES.WEATHER) {

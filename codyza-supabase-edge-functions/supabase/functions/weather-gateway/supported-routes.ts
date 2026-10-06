@@ -56,6 +56,12 @@ export const supportedRoutes = [
     ]
   },
   {
+    pattern: /^\/admin\/dashboard\/?$/,
+    methods: [
+      "GET"
+    ]
+  },
+  {
     pattern: /^\/weather\/search-history\/?$/,
     methods: [
       "GET",

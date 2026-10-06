@@ -104,6 +104,19 @@ CREATE INDEX idx_weather_search_history_user_email_searched_at
   ON weather_search_history (user_email, searched_at DESC);
 ```
 
+## Admin observability dashboard
+
+The API now includes a dedicated admin observability surface at `GET /admin/dashboard`. It aggregates:
+
+- API usage in the last 24 hours
+- failed requests
+- most searched locations
+- active authenticated users
+- in-memory cache performance counters
+- runtime and database health
+
+Request logs are persisted to PostgreSQL by a dedicated admin module and middleware. Configure `WEATHER_OBSERVABILITY_DATABASE_URL`, or let it fall back to `WEATHER_SEARCH_HISTORY_DATABASE_URL` / `DATABASE_URL`.
+
 ## Deployment
 
 When you're ready to deploy your NestJS application to production, there are some key steps you can take to ensure it runs as efficiently as possible. Check out the [deployment documentation](https://docs.nestjs.com/deployment) for more information.
