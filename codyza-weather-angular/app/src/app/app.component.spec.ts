@@ -12,6 +12,11 @@ import { weatherFeature } from './store/weather/weather.feature';
 import { WEATHER_STORAGE_KEYS } from './store/weather/weather-storage.keys';
 
 describe('AppComponent', () => {
+  function createJwtToken(payload: Record<string, unknown>): string {
+    const encodedPayload = btoa(JSON.stringify(payload)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/g, '');
+    return `header.${encodedPayload}.signature`;
+  }
+
   beforeEach(async () => {
     localStorage.clear();
     await TestBed.configureTestingModule({
@@ -44,6 +49,64 @@ describe('AppComponent', () => {
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.querySelector('h1')?.textContent).toContain('Codyza Weather');
     expect(compiled.textContent).toContain('Search any location to start');
+  });
+
+  it('should show the logged-in email next to the notification icon', () => {
+    localStorage.setItem('jwt_token', createJwtToken({ email: 'weather.user@example.com' }));
+
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    expect(compiled.textContent).toContain('weather.user@example.com');
+    expect(compiled.textContent).toContain('Notifications');
+    expect(compiled.querySelector('.hero__identity svg')).toBeTruthy();
+  });
+
+  it('should toggle the notifications panel when the bell button is clicked', () => {
+    localStorage.setItem('jwt_token', createJwtToken({ email: 'weather.user@example.com' }));
+
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const notificationButton = compiled.querySelector('.hero__identity-button') as HTMLButtonElement | null;
+
+    expect(notificationButton).toBeTruthy();
+    expect(compiled.querySelector('.hero__notifications-panel')).toBeNull();
+
+    notificationButton?.click();
+    fixture.detectChanges();
+
+    expect(compiled.querySelector('.hero__notifications-panel')?.textContent).toContain('Signed in as weather.user@example.com.');
+    expect(notificationButton?.getAttribute('aria-expanded')).toBe('true');
+
+    notificationButton?.click();
+    fixture.detectChanges();
+
+    expect(compiled.querySelector('.hero__notifications-panel')).toBeNull();
+    expect(notificationButton?.getAttribute('aria-expanded')).toBe('false');
+  });
+
+  it('should close the notifications panel when clicking outside of it', () => {
+    localStorage.setItem('jwt_token', createJwtToken({ email: 'weather.user@example.com' }));
+
+    const fixture = TestBed.createComponent(AppComponent);
+    fixture.detectChanges();
+
+    const compiled = fixture.nativeElement as HTMLElement;
+    const notificationButton = compiled.querySelector('.hero__identity-button') as HTMLButtonElement | null;
+
+    notificationButton?.click();
+    fixture.detectChanges();
+
+    expect(compiled.querySelector('.hero__notifications-panel')).toBeTruthy();
+
+    document.body.click();
+    fixture.detectChanges();
+
+    expect(compiled.querySelector('.hero__notifications-panel')).toBeNull();
+    expect(notificationButton?.getAttribute('aria-expanded')).toBe('false');
   });
 
   it('should clear the search query and results', () => {

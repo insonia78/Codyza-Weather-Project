@@ -1,6 +1,6 @@
 import { CommonModule } from '@angular/common';
 import { FormsModule } from '@angular/forms';
-import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, OnDestroy, OnInit, ViewChild, computed } from '@angular/core';
+import { AfterViewInit, ChangeDetectionStrategy, Component, ElementRef, HostListener, OnDestroy, OnInit, ViewChild, computed } from '@angular/core';
 import { toSignal } from '@angular/core/rxjs-interop';
 import { Subscription, combineLatest, fromEvent, interval } from 'rxjs';
 
@@ -28,6 +28,25 @@ type LayerOption = { key: MapLayerKey; label: string };
 type MarkerVariant = 'circle' | 'pin';
 
 let googleMapsScriptPromise: Promise<void> | null = null;
+
+function decodeJwtPayload(token: string): Record<string, unknown> | null {
+  const segments = token.split('.');
+  if (segments.length < 2) {
+    return null;
+  }
+
+  try {
+    const normalizedPayload = segments[1].replace(/-/g, '+').replace(/_/g, '/');
+    const paddedPayload = normalizedPayload.padEnd(Math.ceil(normalizedPayload.length / 4) * 4, '=');
+    const decodedPayload = atob(paddedPayload);
+    const payload = JSON.parse(decodedPayload) as unknown;
+    return payload && typeof payload === 'object' && !Array.isArray(payload)
+      ? payload as Record<string, unknown>
+      : null;
+  } catch {
+    return null;
+  }
+}
 
 function loadGoogleMapsScript(apiKey: string): Promise<void> {
   if (typeof google !== 'undefined' && google.maps) {
@@ -69,6 +88,7 @@ function loadGoogleMapsScript(apiKey: string): Promise<void> {
 })
 export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   @ViewChild('mapElement') mapElement?: ElementRef<HTMLDivElement>;
+  @ViewChild('notificationContainer') notificationContainer?: ElementRef<HTMLDivElement>;
 
   readonly title = 'Codyza Weather';
   readonly providerName = this.weatherService.providerName;
@@ -95,6 +115,7 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
   private readonly temperatureUnitState = computed(() => this.appState().temperatureUnit);
   private readonly measurementSystemState = computed(() => this.appState().measurementSystem);
   private logoutInProgress = false;
+  private notificationPanelOpen = false;
 
   constructor(
     private readonly weatherService: WeatherService,
@@ -172,6 +193,43 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
 
   get isLogoutInProgress(): boolean {
     return this.logoutInProgress;
+  }
+
+  get loggedInEmail(): string {
+    if (typeof window === 'undefined') {
+      return '';
+    }
+
+    const token = window.localStorage.getItem('jwt_token');
+    if (!token) {
+      return '';
+    }
+
+    const payload = decodeJwtPayload(token);
+    const email = typeof payload?.['email'] === 'string'
+      ? payload['email']
+      : typeof payload?.['userId'] === 'string'
+        ? payload['userId']
+        : typeof payload?.['sub'] === 'string'
+          ? payload['sub']
+          : '';
+
+    return email.trim();
+  }
+
+  get isNotificationPanelOpen(): boolean {
+    return this.notificationPanelOpen;
+  }
+
+  get notificationItems(): string[] {
+    if (!this.loggedInEmail) {
+      return [];
+    }
+
+    return [
+      `Signed in as ${this.loggedInEmail}.`,
+      'Weather alerts and account notifications will appear here.',
+    ];
   }
 
   get autoRefresh(): boolean {
@@ -356,8 +414,36 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     });
   }
 
+  toggleNotifications(): void {
+    if (!this.loggedInEmail) {
+      this.notificationPanelOpen = false;
+      return;
+    }
+
+    this.notificationPanelOpen = !this.notificationPanelOpen;
+  }
+
+  @HostListener('document:click', ['$event'])
+  onDocumentClick(event: MouseEvent): void {
+    if (!this.notificationPanelOpen) {
+      return;
+    }
+
+    const target = event.target;
+    if (!(target instanceof Node)) {
+      return;
+    }
+
+    if (this.notificationContainer?.nativeElement.contains(target)) {
+      return;
+    }
+
+    this.notificationPanelOpen = false;
+  }
+
   private completeLogout(): void {
     this.logoutInProgress = false;
+    this.notificationPanelOpen = false;
     this.weatherStore.setApiMessage('');
     this.resetApp();
     localStorage.removeItem('jwt_token');

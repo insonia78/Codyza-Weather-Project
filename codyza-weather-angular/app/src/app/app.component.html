@@ -7,6 +7,41 @@
         Production-style frontend for live worldwide weather, geocoded location search, hourly forecast,
         daily outlook, recent history, and automatic refresh using {{ providerName }}.
       </p>
+      @if (loggedInEmail) {
+        <div #notificationContainer class="hero__identity">
+          <button
+            type="button"
+            class="hero__identity-button"
+            [attr.aria-expanded]="isNotificationPanelOpen"
+            aria-controls="notification-panel"
+            aria-label="Toggle notifications"
+            (click)="toggleNotifications()">
+            <span class="hero__identity-icon" aria-hidden="true">
+              <svg viewBox="0 0 24 24" focusable="false">
+                <path
+                  d="M12 3.75a4.25 4.25 0 0 0-4.25 4.25v2.21c0 .92-.27 1.82-.78 2.58l-1.2 1.81a1.75 1.75 0 0 0 1.46 2.72h9.52a1.75 1.75 0 0 0 1.46-2.72l-1.2-1.81a4.65 4.65 0 0 1-.78-2.58V8A4.25 4.25 0 0 0 12 3.75Zm0 16.5a2.74 2.74 0 0 1-2.55-1.75h5.1A2.74 2.74 0 0 1 12 20.25Z" />
+              </svg>
+            </span>
+            <div class="hero__identity-copy">
+              <span class="hero__identity-label">Notifications</span>
+              <strong>{{ loggedInEmail }}</strong>
+            </div>
+          </button>
+          @if (isNotificationPanelOpen) {
+            <div id="notification-panel" class="hero__notifications-panel" role="dialog" aria-label="Notifications panel">
+              <div class="hero__notifications-header">
+                <strong>Notifications</strong>
+                <span>{{ loggedInEmail }}</span>
+              </div>
+              <ul class="hero__notifications-list">
+                @for (notification of notificationItems; track notification) {
+                  <li>{{ notification }}</li>
+                }
+              </ul>
+            </div>
+          }
+        </div>
+      }
     </div>
 
     <div class="hero__toolbar">

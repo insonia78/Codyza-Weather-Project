@@ -1,3 +1,90 @@
 :host {
   display: block;
 }
+
+.hero__identity {
+  margin-top: 20px;
+  position: relative;
+  display: inline-flex;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 10px;
+}
+
+.hero__identity-button {
+  display: inline-flex;
+  align-items: center;
+  gap: 12px;
+  padding: 12px 16px;
+  border: 1px solid rgba(79, 209, 255, 0.25);
+  border-radius: 18px;
+  background: rgba(79, 209, 255, 0.08);
+  color: inherit;
+  text-align: left;
+}
+
+.hero__identity-button:hover,
+.hero__identity-button[aria-expanded='true'] {
+  background: rgba(79, 209, 255, 0.14);
+  border-color: rgba(79, 209, 255, 0.4);
+}
+
+.hero__identity-button:focus-visible {
+  outline: 2px solid rgba(79, 209, 255, 0.75);
+  outline-offset: 3px;
+}
+
+.hero__identity-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 40px;
+  height: 40px;
+  border-radius: 999px;
+  background: rgba(79, 209, 255, 0.14);
+  color: #7dd3fc;
+}
+
+.hero__identity-icon svg {
+  width: 20px;
+  height: 20px;
+  fill: currentColor;
+}
+
+.hero__identity-copy {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.hero__identity-label {
+  font-size: 0.78rem;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: #7dd3fc;
+}
+
+.hero__notifications-panel {
+  min-width: min(100%, 320px);
+  padding: 16px;
+  border: 1px solid rgba(79, 209, 255, 0.2);
+  border-radius: 18px;
+  background: rgba(7, 13, 29, 0.95);
+  box-shadow: 0 18px 40px rgba(2, 6, 23, 0.32);
+}
+
+.hero__notifications-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-bottom: 12px;
+  color: var(--text-secondary);
+}
+
+.hero__notifications-list {
+  margin: 0;
+  padding-left: 18px;
+  color: var(--text-primary);
+  display: grid;
+  gap: 8px;
+}

@@ -451,7 +451,6 @@ function buildProxiedResponse(
 async function appendTokenForAccountRoutes(
   req: Request,
   payload: unknown,
-  requestBody: Blob | null,
 ) {
   if (!jwtCreatorUrl || !(payload && typeof payload === "object" && !Array.isArray(payload))) {
     return payload;
@@ -467,10 +466,19 @@ async function appendTokenForAccountRoutes(
     jwtCreatorHeaders.set(key, value);
   });
 
+  const accountPayload = payload as Record<string, unknown>;
+  const accountEmail = typeof accountPayload.email === "string" ? accountPayload.email.trim() : "";
+  if (!accountEmail) {
+    return payload;
+  }
+
   const jwtResponse = await fetch(jwtCreatorUrl, {
     method: "POST",
     headers: jwtCreatorHeaders,
-    body: requestBody,
+    body: JSON.stringify({
+      userId: accountEmail,
+      email: accountEmail,
+    }),
   });
 
   if (!jwtResponse.ok) {
@@ -654,7 +662,7 @@ export default {
       });
 
       if (service === SERVICES.ACCOUNTS && backendResponse.ok) {
-        const payloadWithToken = await appendTokenForAccountRoutes(req, responseBody, requestBody);
+        const payloadWithToken = await appendTokenForAccountRoutes(req, responseBody);
 
         logGatewayEvent("info", "accounts.token-appended", {
           requestId,
