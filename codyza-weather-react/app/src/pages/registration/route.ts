@@ -1,5 +1,6 @@
 import React from "react";
 import { redirectDocument, type ActionFunctionArgs, type RouteObject } from "react-router-dom";
+import { redirectIfAdministrator } from "../admin-handoff";
 import RegistrationPage from "./index";
 import { validateRegistrationForm } from "./functions";
 
@@ -18,16 +19,27 @@ export async function registrationAction({
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
   const confirmPassword = String(formData.get("confirmPassword") ?? "");
-  const errors = validateRegistrationForm({ email, password, confirmPassword });
-
-  if (errors.length > 0) {
+  if (!email.trim()) {
     return {
-      errors,
+      errors: ["Email is required."],
       values: { email },
     };
   }
 
   try {
+    const adminRedirect = await redirectIfAdministrator(email);
+    if (adminRedirect) {
+      return adminRedirect;
+    }
+
+    const errors = validateRegistrationForm({ email, password, confirmPassword });
+    if (errors.length > 0) {
+      return {
+        errors,
+        values: { email },
+      };
+    }
+
     const response = await fetch(`${process.env.REACT_APP_API_BASE_URL}/accounts`, {
       method: "POST",
       body: JSON.stringify({ email, password }),
@@ -48,7 +60,7 @@ export async function registrationAction({
   } catch (error) {
     console.error("Registration request failed:", error);
     return {
-      errors: ["Registration request failed. Please try again."],
+      errors: [error instanceof Error ? error.message : "Registration request failed. Please try again."],
       values: { email },
     };
   }

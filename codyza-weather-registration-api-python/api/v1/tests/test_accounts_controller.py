@@ -66,6 +66,26 @@ class CreateAccountTests(unittest.IsolatedAsyncioTestCase):
         self.assertTrue(session.add.call_args.args[0].password_salt)
         session.commit.assert_called_once()
 
+    async def test_create_account_normalizes_email_before_persisting(self) -> None:
+        exec_result = Mock()
+        exec_result.first.return_value = None
+
+        session = Mock()
+        session.exec.return_value = exec_result
+
+        def refresh_account(account: Account) -> None:
+            account.id = 2
+
+        session.refresh.side_effect = refresh_account
+
+        account = await create_account(
+            AccountBase(email="Admin.User@Example.com", password="password123"),
+            session,
+        )
+
+        self.assertEqual(account.email, "admin.user@example.com")
+        self.assertEqual(session.add.call_args.args[0].email, "admin.user@example.com")
+
     def test_get_account_access_requires_password_setup_when_password_missing(self) -> None:
         existing_account = Account(
             id=7,
@@ -93,7 +113,7 @@ class CreateAccountTests(unittest.IsolatedAsyncioTestCase):
         existing_account = Account(
             id=8,
             email="legacy@example.com",
-            password="stored-password-hash",
+            password="stored-hash",
             password_salt="stored-salt",
             role="",
         )
@@ -112,11 +132,34 @@ class CreateAccountTests(unittest.IsolatedAsyncioTestCase):
         self.assertEqual(session.add.call_args.args[0].role, "user")
         session.commit.assert_called_once()
 
+    def test_get_account_access_looks_up_email_case_insensitively(self) -> None:
+        existing_account = Account(
+            id=9,
+            email="Admin.User@Example.com",
+            password=None,
+            password_salt=None,
+            role="admin",
+        )
+        exec_result = Mock()
+        exec_result.first.return_value = existing_account
+
+        session = Mock()
+        session.exec.return_value = exec_result
+
+        account = get_account_access(
+            AccountEmailLookup(email="admin.user@example.com"),
+            session,
+        )
+
+        self.assertEqual(account.email, "Admin.User@Example.com")
+        executed_statement = session.exec.call_args.args[0]
+        self.assertIn("lower(accounts.email)", str(executed_statement))
+
     def test_create_account_password_rejects_existing_password(self) -> None:
         existing_account = Account(
             id=7,
             email="admin@example.com",
-            password="stored-password-hash",
+            password="stored-hash",
             password_salt="stored-salt",
             role="admin",
         )

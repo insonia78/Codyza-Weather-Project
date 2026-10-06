@@ -16,7 +16,7 @@ const Login = () => {
       <CodyzaBranding compact showPoweredBy={false} />
       <p className={styles.eyebrow}>Welcome back</p>
       <h1 className={styles.title}>Login</h1>
-      <p className={styles.description}>Access your weather dashboard and saved locations.</p>
+      <p className={styles.description}>Access your weather dashboard and saved locations. Administrator emails are redirected to the Codyza Weather administration password setup flow.</p>
       {errors.length > 0 && (
         <div className={styles.errorBox}>
           <h2>Validation Errors:</h2>

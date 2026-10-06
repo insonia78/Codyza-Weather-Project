@@ -1,4 +1,5 @@
 from fastapi import HTTPException, status
+from sqlalchemy import func
 from sqlmodel import select
 
 from controller.accounts_controller.models.models import (
@@ -12,6 +13,16 @@ from controller.accounts_controller.models.models import (
 )
 from controller.accounts_controller.passwords import create_password_hash, verify_password
 from database.postgres import SessionDep
+
+
+def normalize_email(email: str) -> str:
+    return email.strip().lower()
+
+
+def find_account_by_email(email: str, session: SessionDep) -> Account | None:
+    normalized_email = normalize_email(email)
+    statement = select(Account).where(func.lower(Account.email) == normalized_email)
+    return session.exec(statement).first()
 
 
 def normalize_account_role(account: Account, session: SessionDep) -> str:
@@ -28,8 +39,7 @@ def normalize_account_role(account: Account, session: SessionDep) -> str:
 
 def get_account_access(body: AccountEmailLookup, session: SessionDep) -> AccountLoginPublic:
     try:
-        statement = select(Account).where(Account.email == body.email)
-        account = session.exec(statement).first()
+        account = find_account_by_email(body.email, session)
         if not account:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -53,8 +63,7 @@ def get_account_access(body: AccountEmailLookup, session: SessionDep) -> Account
 
 def get_account(body: AccountBase, session: SessionDep) -> AccountLoginPublic:
     try:
-        statement = select(Account).where(Account.email == body.email)
-        account = session.exec(statement).first()
+        account = find_account_by_email(body.email, session)
         if not account or not verify_password(body.password, account.password, account.password_salt):
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -84,8 +93,7 @@ def get_account(body: AccountBase, session: SessionDep) -> AccountLoginPublic:
 
 def create_account_password(body: AccountPasswordSetup, session: SessionDep) -> AccountLoginPublic:
     try:
-        statement = select(Account).where(Account.email == body.email)
-        account = session.exec(statement).first()
+        account = find_account_by_email(body.email, session)
         if not account:
             raise HTTPException(
                 status_code=status.HTTP_404_NOT_FOUND,
@@ -120,9 +128,8 @@ def create_account_password(body: AccountPasswordSetup, session: SessionDep) -> 
 
 async def create_account(body: AccountBase, session: SessionDep) -> AccountPublic:
     try:
-        existing_account = session.exec(
-            select(Account).where(Account.email == body.email),
-        ).first()
+        normalized_email = normalize_email(body.email)
+        existing_account = find_account_by_email(normalized_email, session)
         if existing_account:
             raise HTTPException(
                 status_code=status.HTTP_409_CONFLICT,
@@ -131,7 +138,7 @@ async def create_account(body: AccountBase, session: SessionDep) -> AccountPubli
 
         password_hash, password_salt = create_password_hash(body.password)
         account = Account(
-            email=body.email,
+            email=normalized_email,
             password=password_hash,
             password_salt=password_salt,
             role="user",
@@ -159,6 +166,8 @@ def update_account(id: int, body: AccountBase, session: SessionDep) -> AccountPu
             if k == "password":
                 account.password, account.password_salt = create_password_hash(v)
                 continue
+            if k == "email":
+                v = normalize_email(v)
             setattr(account, k, v)
         session.add(account)
         session.commit()
@@ -182,6 +191,8 @@ def patch_account(id: int, body: AccountUpdate, session: SessionDep) -> AccountP
             if k == "password":
                 account.password, account.password_salt = create_password_hash(v)
                 continue
+            if k == "email":
+                v = normalize_email(v)
             setattr(account, k, v)
         session.add(account)
         session.commit()

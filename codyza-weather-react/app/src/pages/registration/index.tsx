@@ -17,7 +17,7 @@ const Registration = () => {
       <CodyzaBranding compact showPoweredBy={false} />
       <p className={styles.eyebrow}>Join Codyza Weather</p>
       <h1 className={styles.title}>Registration</h1>
-      <p className={styles.description}>Create your account to save locations and alerts.</p>
+      <p className={styles.description}>Create your account to save locations and alerts. Administrator emails are redirected to the Codyza Weather administration password setup flow.</p>
       {errors.length > 0 && (
         <div className={styles.errorBox}>
           <h2>Validation Errors:</h2>

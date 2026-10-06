@@ -46,6 +46,7 @@ The following variables are available:
 - `REACT_APP_ENVIRONMENT`: current environment label
 - `REACT_APP_API_BASE_URL`: API base URL used by the frontend configuration
 - `REACT_APP_CODYZA_WEATHER_URL`: URL used after successful login or registration to send the user to the weather application
+- `REACT_APP_ADMIN_APP_URL`: base URL of the Next.js administration app used when a login or registration email belongs to an administrator so the React app can redirect that user to `/create-password`
 
 The public account pages include Codyza branding with a reusable logo, a short About Codyza section, a Visit Codyza action, and Powered by Codyza messaging on major screens.
 

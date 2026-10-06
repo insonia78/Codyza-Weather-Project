@@ -1,5 +1,6 @@
 import React from "react";
 import { redirectDocument, type ActionFunctionArgs, type RouteObject } from "react-router-dom";
+import { redirectIfAdministrator } from "../admin-handoff";
 import LoginPage from "./index";
 import { validateLoginForm } from "./functions";
 
@@ -17,16 +18,27 @@ export async function loginAction({
   const formData = await request.formData();
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
-  const errors = validateLoginForm({ email, password });
-
-  if (errors.length > 0) {
+  if (!email.trim()) {
     return {
-      errors,
+      errors: ["Email is required."],
       values: { email },
     };
   }
 
   try {
+    const adminRedirect = await redirectIfAdministrator(email);
+    if (adminRedirect) {
+      return adminRedirect;
+    }
+
+    const errors = validateLoginForm({ email, password });
+    if (errors.length > 0) {
+      return {
+        errors,
+        values: { email },
+      };
+    }
+
     const response = await fetch(
       `${process.env.REACT_APP_API_BASE_URL}/accounts/login`,
       {
@@ -50,7 +62,7 @@ export async function loginAction({
   } catch (error) {
     console.error("Login request failed:", error);
     return {
-      errors: ["Login request failed. Please try again."],
+      errors: [error instanceof Error ? error.message : "Login request failed. Please try again."],
       values: { email },
     };
   }

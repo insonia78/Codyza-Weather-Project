@@ -17,6 +17,7 @@ const apiBaseUrl =
 export const appConfig = {
   appName: process.env.REACT_APP_APP_NAME ?? DEFAULT_APP_NAME,
   apiBaseUrl,
+  adminAppUrl: (process.env.REACT_APP_ADMIN_APP_URL ?? '').trim(),
   environment,
   isProduction: environment === 'production',
 };
