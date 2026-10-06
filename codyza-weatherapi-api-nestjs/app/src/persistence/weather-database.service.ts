@@ -6,6 +6,7 @@ import {
 } from '@nestjs/common';
 import { Pool, type QueryResult, type QueryResultRow } from 'pg';
 
+const observabilityDatabaseUrlEnvVar = 'WEATHER_OBSERVABILITY_DATABASE_URL';
 const searchHistoryDatabaseUrlEnvVar = 'WEATHER_SEARCH_HISTORY_DATABASE_URL';
 const fallbackDatabaseUrlEnvVar = 'DATABASE_URL';
 
@@ -25,10 +26,12 @@ export class WeatherDatabaseService implements OnModuleDestroy {
       return this.pool;
     }
 
-    const databaseUrl = process.env[searchHistoryDatabaseUrlEnvVar] ?? process.env[fallbackDatabaseUrlEnvVar];
+    const databaseUrl = process.env[searchHistoryDatabaseUrlEnvVar]
+      ?? process.env[observabilityDatabaseUrlEnvVar]
+      ?? process.env[fallbackDatabaseUrlEnvVar];
     if (!databaseUrl) {
       throw new ServiceUnavailableException(
-        `Missing ${searchHistoryDatabaseUrlEnvVar} or ${fallbackDatabaseUrlEnvVar} environment variable.`,
+        `Missing ${searchHistoryDatabaseUrlEnvVar}, ${observabilityDatabaseUrlEnvVar}, or ${fallbackDatabaseUrlEnvVar} environment variable.`,
       );
     }
 

@@ -138,7 +138,49 @@ export class UserProfileService {
             auto_refresh BOOLEAN NOT NULL DEFAULT true,
             notification_preferences JSONB NOT NULL DEFAULT '{"dailySummary": true, "severeWeather": true, "airQuality": false, "weekendOutlook": false}'::jsonb,
             updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-          )
+          );
+
+          ALTER TABLE weather_user_profiles
+            ADD COLUMN IF NOT EXISTS favorites JSONB,
+            ADD COLUMN IF NOT EXISTS comparison_locations JSONB,
+            ADD COLUMN IF NOT EXISTS temperature_unit VARCHAR(20),
+            ADD COLUMN IF NOT EXISTS measurement_system VARCHAR(20),
+            ADD COLUMN IF NOT EXISTS selected_map_layer VARCHAR(30),
+            ADD COLUMN IF NOT EXISTS auto_refresh BOOLEAN,
+            ADD COLUMN IF NOT EXISTS notification_preferences JSONB,
+            ADD COLUMN IF NOT EXISTS updated_at TIMESTAMPTZ;
+
+          UPDATE weather_user_profiles
+          SET
+            favorites = COALESCE(favorites, '[]'::jsonb),
+            comparison_locations = COALESCE(comparison_locations, '[]'::jsonb),
+            temperature_unit = COALESCE(NULLIF(TRIM(temperature_unit), ''), 'celsius'),
+            measurement_system = COALESCE(NULLIF(TRIM(measurement_system), ''), 'metric'),
+            selected_map_layer = COALESCE(NULLIF(TRIM(selected_map_layer), ''), 'clouds_new'),
+            auto_refresh = COALESCE(auto_refresh, true),
+            notification_preferences = COALESCE(
+              notification_preferences,
+              '{"dailySummary": true, "severeWeather": true, "airQuality": false, "weekendOutlook": false}'::jsonb
+            ),
+            updated_at = COALESCE(updated_at, NOW());
+
+          ALTER TABLE weather_user_profiles
+            ALTER COLUMN favorites SET DEFAULT '[]'::jsonb,
+            ALTER COLUMN comparison_locations SET DEFAULT '[]'::jsonb,
+            ALTER COLUMN temperature_unit SET DEFAULT 'celsius',
+            ALTER COLUMN measurement_system SET DEFAULT 'metric',
+            ALTER COLUMN selected_map_layer SET DEFAULT 'clouds_new',
+            ALTER COLUMN auto_refresh SET DEFAULT true,
+            ALTER COLUMN notification_preferences SET DEFAULT '{"dailySummary": true, "severeWeather": true, "airQuality": false, "weekendOutlook": false}'::jsonb,
+            ALTER COLUMN updated_at SET DEFAULT NOW(),
+            ALTER COLUMN favorites SET NOT NULL,
+            ALTER COLUMN comparison_locations SET NOT NULL,
+            ALTER COLUMN temperature_unit SET NOT NULL,
+            ALTER COLUMN measurement_system SET NOT NULL,
+            ALTER COLUMN selected_map_layer SET NOT NULL,
+            ALTER COLUMN auto_refresh SET NOT NULL,
+            ALTER COLUMN notification_preferences SET NOT NULL,
+            ALTER COLUMN updated_at SET NOT NULL
         `,
       ).then(() => {
         this.schemaEnsured = true;

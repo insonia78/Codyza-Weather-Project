@@ -32,6 +32,8 @@
 
 This app is validated with Node.js `24.19.0` and npm `11.17.0`.
 
+Copy [`.env.example`](./.env.example) to `.env` and then fill in the provider keys, database URLs, and `WEATHER_GATEWAY_INTERNAL_SECRET`.
+
 ```bash
 $ npm install
 ```
@@ -122,7 +124,7 @@ Recent searches are now handled by a dedicated Nest search-history service inste
 
 These endpoints expect the authenticated user identity in the `X-User-Id` header that the gateway already forwards from the validated JWT subject.
 
-Set `WEATHER_SEARCH_HISTORY_DATABASE_URL` (or `DATABASE_URL`) so the search-history service can persist recent searches in PostgreSQL.
+Set `WEATHER_SEARCH_HISTORY_DATABASE_URL` so the search-history and protected profile services can persist user data in PostgreSQL. If that variable is not set, the Nest app now falls back to `WEATHER_OBSERVABILITY_DATABASE_URL`, then `DATABASE_URL`, which helps environments that share a single PostgreSQL instance across admin observability and user profile storage.
 
 The Nest API now bootstraps the `weather_search_history` table and its indexes automatically on first use, so new environments do not need a separate manual migration before recent-search or admin top-search features can work.
 
@@ -158,7 +160,7 @@ CREATE TABLE weather_user_profiles (
 );
 ```
 
-`GET /weather/profile` returns the protected user dashboard payload that combines persisted favorites, comparisons, units, map-layer settings, notification preferences, and backend-backed recent searches. The service also lazily creates `weather_user_profiles` if the table is missing, which helps new deployments bootstrap cleanly.
+`GET /weather/profile` returns the protected user dashboard payload that combines persisted favorites, comparisons, units, map-layer settings, notification preferences, and backend-backed recent searches. The service also lazily creates `weather_user_profiles` if the table is missing and backfills any newly introduced profile columns in older deployments, which helps both fresh and already-running environments bootstrap cleanly.
 
 ## Admin observability dashboard
 

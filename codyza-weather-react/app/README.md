@@ -1,6 +1,6 @@
 # Getting Started with Create React App
 
-This project was bootstrapped with [Create React App](https://github.com/facebook/create-react-app).
+# Codyza Weather Root Auth App
 
 ## Available Scripts
 
@@ -39,6 +39,7 @@ This app now includes separate environment files for development and production:
 
 - `.env.development`
 - `.env.production`
+- `.env.example`
 
 The following variables are available:
 
@@ -69,10 +70,10 @@ For machine-specific overrides, add one of the ignored local files such as `.env
 
 The default microfrontends config lives in `microfrontends.json` at the app root.
 
-- the default production Vercel project is `codyza-weather-project-954u`, which maps to this Create React App project whose `package.json` name is `app`
+- the default production Vercel project is `codyza-weather-project-17oc`, which maps to this Create React App project whose `package.json` name is `app`
 - local development uses the existing `start` script on port `3000`
 - the child Angular microfrontend is mapped to the production Vercel project `codyza-weather-project` and uses its `start` script on port `4200`
-- the React root app uses the Vercel deployment `codyza-weather-project-954u.vercel.app` for its default fallback and post-auth redirects
+- the React root app uses the Vercel deployment `codyza-weather-project-17oc.vercel.app` for its default fallback and post-auth redirects
 - the Angular child can still fall back to its deployed Vercel application during local development
 - production routing sends both `/codyza-weather-angular` and `/codyza-weather-angular/*` to the Angular microfrontend
 - Angular static assets are routed through `/codyza-weather-angular-assets/*` so the child app can boot correctly from the React root domain

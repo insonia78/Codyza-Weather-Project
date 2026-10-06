@@ -44,6 +44,11 @@ describe('UserProfileService', () => {
       },
       updatedAt: null,
     });
+
+    expect(client.query).toHaveBeenNthCalledWith(
+      1,
+      expect.stringContaining('ALTER TABLE weather_user_profiles'),
+    );
   });
 
   it('sanitizes and returns the saved profile payload', async () => {
