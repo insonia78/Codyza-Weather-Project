@@ -360,7 +360,15 @@ function buildProxyHeaders(
     }
   }
 
-  if ((service === SERVICES.ACCOUNTS || service === SERVICES.AUTH || service === SERVICES.ADMIN) && gatewayInternalSecret) {
+  if (
+    (
+      service === SERVICES.ACCOUNTS ||
+      service === SERVICES.AUTH ||
+      service === SERVICES.ADMIN ||
+      service === SERVICES.WEATHER
+    ) &&
+    gatewayInternalSecret
+  ) {
     const gatewayHeaders = buildWeatherGatewayHeaders(gatewayInternalSecret);
     Object.entries(gatewayHeaders).forEach(([key, value]) => {
       headers.set(key, value);
