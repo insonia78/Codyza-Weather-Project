@@ -48,6 +48,10 @@ export async function redirectIfAdministrator(
   }
 
   const { email: adminEmail, passwordSetupRequired } = (await adminAccessResponse.json()) as AdminAccessResponse;
+  if (intent === "reset-password" && !passwordSetupRequired) {
+    return null;
+  }
+
   const adminRedirectUrl = passwordSetupRequired || intent !== "login"
     ? buildAdminCreatePasswordUrl(adminEmail)
     : buildAdminLoginUrl(adminEmail);

@@ -47,14 +47,14 @@ The following variables are available:
 - `REACT_APP_ENVIRONMENT`: current environment label
 - `REACT_APP_API_BASE_URL`: API base URL used by the frontend configuration
 - `REACT_APP_CODYZA_WEATHER_URL`: URL used after successful login or registration to send the user to the weather application
-- `REACT_APP_ADMIN_APP_URL`: base URL of the Next.js administration app used when a login, registration, or reset-password email belongs to an administrator so the React app can redirect that user to `/create-password`
+- `REACT_APP_ADMIN_APP_URL`: base URL of the Next.js administration app used when a login or registration email belongs to an administrator so the React app can redirect that user to the correct admin flow
 
 The public account pages include Codyza branding with a reusable logo, a short About Codyza section, a Visit Codyza action, and Powered by Codyza messaging on major screens.
 
 The reset-password page now supports the full user flow:
 
 - requesting a reset link by email
-- handling admin-email redirects to the administration create-password flow
+- letting existing administrator accounts use the standard reset-token flow while still redirecting first-time admin bootstrap accounts to the administration create-password flow
 - confirming a new password from a reset link with `?token=...`
 
 For production email delivery, the registration API must expose `/accounts/reset-password` and `/accounts/reset-password/confirm`, and its environment must set `PASSWORD_RESET_URL_BASE` to this app's public `/reset-password` URL.
