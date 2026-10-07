@@ -46,6 +46,7 @@ const weatherApiUrl =
   Deno.env.get("WEATHER_API_URL") ??
   Deno.env.get("NEST_WEATHER_API_URL") ??
   Deno.env.get("BACKEND_URL");
+const turnstileProtectionEnabled = false;
 const turnstileSecretKey = Deno.env.get("TURNSTILE_SECRET_KEY");
 const turnstileVerifyUrl = Deno.env.get("TURNSTILE_VERIFY_URL") ??
   "https://challenges.cloudflare.com/turnstile/v0/siteverify";
@@ -432,6 +433,10 @@ async function verifyTurnstileChallenge(
   req: Request,
   turnstileToken: string,
 ) {
+  if (!turnstileProtectionEnabled) {
+    return null;
+  }
+
   if (!turnstileSecretKey?.trim()) {
     return jsonResponse(503, {
       error: "Cloudflare Turnstile protection is not configured for login.",

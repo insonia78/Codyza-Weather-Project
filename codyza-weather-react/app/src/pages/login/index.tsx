@@ -1,20 +1,14 @@
 import React from "react";
 import { Form, Link, useActionData, useNavigation } from 'react-router-dom';
-import { useCallback, useState } from "react";
 import type { LoginActionData } from './route';
 import styles from './css/styles.module.css';
 import { CodyzaBranding } from '../../components/CodyzaBranding';
-import { TurnstileWidget } from "../../components/TurnstileWidget";
 
 const Login = () => {  
   const actionData = useActionData() as LoginActionData | undefined;
   const navigation = useNavigation();
   const errors = actionData?.errors ?? [];
   const isSubmitting = navigation.state === 'submitting';
-  const [turnstileToken, setTurnstileToken] = useState('');
-  const handleTurnstileTokenChange = useCallback((token: string) => {
-    setTurnstileToken(token);
-  }, []);
     
   return (
     <main className={styles.page}>
@@ -45,16 +39,6 @@ const Login = () => {
           <span>Password</span>
           <input type="password" id="password" name="password" required />
         </label>
-        <input type="hidden" name="turnstileToken" value={turnstileToken} />
-        <div className={styles.securityCheck}>
-          <span className={styles.securityLabel}>Security check</span>
-          <TurnstileWidget
-            siteKey={process.env.REACT_APP_TURNSTILE_SITE_KEY ?? ''}
-            onTokenChange={handleTurnstileTokenChange}
-            containerClassName={styles.turnstileWidget}
-            warningClassName={styles.securityWarning}
-          />
-        </div>
         <button className={styles.submitButton} type="submit" disabled={isSubmitting}>
           {isSubmitting ? 'Submitting...' : 'Login'}
         </button>

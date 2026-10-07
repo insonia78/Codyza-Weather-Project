@@ -48,24 +48,7 @@ describe('loginAction', () => {
     process.env = originalEnv;
   });
 
-  it('requires a Turnstile token before submitting login credentials', async () => {
-    redirectIfAdministratorMock.mockResolvedValue(null);
-
-    const result = await loginAction({
-      request: createActionRequest({
-        email: 'user@example.com',
-        password: 'password123',
-      }),
-    } as ActionFunctionArgs);
-
-    expect(fetchMock).not.toHaveBeenCalled();
-    expect(result).toEqual({
-      errors: ['Complete the security check before signing in.'],
-      values: { email: 'user@example.com' },
-    });
-  });
-
-  it('forwards the Turnstile token with the login request and stores the returned JWT', async () => {
+  it('submits the login request and stores the returned JWT', async () => {
     redirectIfAdministratorMock.mockResolvedValue(null);
     fetchMock.mockResolvedValue(new Response(JSON.stringify({
       token: 'jwt-token',
@@ -78,7 +61,6 @@ describe('loginAction', () => {
       request: createActionRequest({
         email: 'user@example.com',
         password: 'password123',
-        turnstileToken: 'turnstile-token',
       }),
     } as ActionFunctionArgs);
 
@@ -87,7 +69,6 @@ describe('loginAction', () => {
       body: JSON.stringify({
         email: 'user@example.com',
         password: 'password123',
-        turnstileToken: 'turnstile-token',
       }),
     }));
     expect(localStorage.getItem('jwt_token')).toBe('jwt-token');

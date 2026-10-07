@@ -8,7 +8,6 @@ export const dynamic = "force-dynamic";
 type LoginRequestBody = {
   email?: string;
   password?: string;
-  turnstileToken?: string;
 };
 
 type GatewayLoginResponse = {
@@ -43,10 +42,9 @@ export async function POST(request: Request) {
 
   const email = typeof requestBody.email === "string" ? requestBody.email.trim() : "";
   const password = typeof requestBody.password === "string" ? requestBody.password : "";
-  const turnstileToken = typeof requestBody.turnstileToken === "string" ? requestBody.turnstileToken.trim() : "";
-  if (!email || !password || !turnstileToken) {
+  if (!email || !password) {
     return NextResponse.json(
-      { error: "Email, password, and security check are required." },
+      { error: "Email and password are required." },
       { status: 400 },
     );
   }
@@ -67,7 +65,7 @@ export async function POST(request: Request) {
     gatewayResponse = await fetchGatewayWithRetry(loginUrl, {
       method: "POST",
       headers,
-      body: JSON.stringify({ email, password, turnstileToken }),
+      body: JSON.stringify({ email, password }),
       cache: "no-store",
     });
   } catch (error) {
