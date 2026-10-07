@@ -46,6 +46,9 @@ const weatherApiUrl =
   Deno.env.get("WEATHER_API_URL") ??
   Deno.env.get("NEST_WEATHER_API_URL") ??
   Deno.env.get("BACKEND_URL");
+const turnstileSecretKey = Deno.env.get("TURNSTILE_SECRET_KEY");
+const turnstileVerifyUrl = Deno.env.get("TURNSTILE_VERIFY_URL") ??
+  "https://challenges.cloudflare.com/turnstile/v0/siteverify";
 const jwtCreatorUrl = Deno.env.get("JWT_CREATOR_URL");
 const jwtValidatorUrl = Deno.env.get("JWT_VALIDATOR_URL");
 const gatewayInternalSecret = Deno.env.get("WEATHER_GATEWAY_INTERNAL_SECRET");
@@ -403,6 +406,95 @@ function isAccountDeactivatePath(proxyPath: string) {
   return proxyPath === "/accounts/deactivate";
 }
 
+function getRequestIpAddress(req: Request) {
+  const forwardedFor = req.headers.get("x-forwarded-for");
+  if (forwardedFor) {
+    const [firstIp] = forwardedFor.split(",");
+    if (firstIp?.trim()) {
+      return firstIp.trim();
+    }
+  }
+
+  const cfConnectingIp = req.headers.get("cf-connecting-ip");
+  if (cfConnectingIp?.trim()) {
+    return cfConnectingIp.trim();
+  }
+
+  const xRealIp = req.headers.get("x-real-ip");
+  if (xRealIp?.trim()) {
+    return xRealIp.trim();
+  }
+
+  return "";
+}
+
+async function verifyTurnstileChallenge(
+  req: Request,
+  turnstileToken: string,
+) {
+  if (!turnstileSecretKey?.trim()) {
+    return jsonResponse(503, {
+      error: "Cloudflare Turnstile protection is not configured for login.",
+    }, req);
+  }
+
+  if (!turnstileToken) {
+    return jsonResponse(400, {
+      error: "Complete the security check before signing in.",
+    }, req);
+  }
+
+  const verificationBody = new URLSearchParams({
+    secret: turnstileSecretKey.trim(),
+    response: turnstileToken,
+  });
+  const remoteIp = getRequestIpAddress(req);
+  if (remoteIp) {
+    verificationBody.set("remoteip", remoteIp);
+  }
+
+  let verificationResponse: Response;
+  try {
+    verificationResponse = await fetch(turnstileVerifyUrl, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/x-www-form-urlencoded",
+      },
+      body: verificationBody,
+    });
+  } catch (error) {
+    logGatewayEvent("error", "turnstile.verification.failed", {
+      details: getErrorMessage(error),
+    });
+    return jsonResponse(502, {
+      error: "Unable to verify the security check right now.",
+    }, req);
+  }
+
+  const verificationPayload = await verificationResponse.json().catch(() => null) as {
+    success?: boolean;
+    ["error-codes"]?: string[];
+  } | null;
+
+  if (!verificationResponse.ok) {
+    return jsonResponse(502, {
+      error: "Unable to verify the security check right now.",
+    }, req);
+  }
+
+  if (!verificationPayload?.success) {
+    const errorCodes = verificationPayload?.["error-codes"] ?? [];
+    const challengeExpired = errorCodes.includes("timeout-or-duplicate");
+    return jsonResponse(403, {
+      error: challengeExpired
+        ? "The security check expired. Please try again."
+        : "Security check verification failed. Please try again.",
+    }, req);
+  }
+
+  return null;
+}
+
 function isAdminDashboardPath(proxyPath: string) {
   return proxyPath === "/admin/dashboard";
 }
@@ -438,8 +530,21 @@ function isAdminLoginRequestBody(value: unknown): value is { email: string; pass
   return typeof record.email === "string" && typeof record.password === "string";
 }
 
+function getTurnstileToken(value: unknown) {
+  if (typeof value !== "object" || value === null || Array.isArray(value)) {
+    return "";
+  }
+
+  const record = value as Record<string, unknown>;
+  return typeof record.turnstileToken === "string" ? record.turnstileToken.trim() : "";
+}
+
 function isAdminCreatePasswordRequestBody(value: unknown): value is { email: string; password: string } {
   return isAdminLoginRequestBody(value);
+}
+
+function isAccountLoginPath(proxyPath: string) {
+  return proxyPath === "/accounts/login";
 }
 
 async function parseJsonBodyFromBlob(requestBody: Blob | null) {
@@ -663,6 +768,50 @@ async function buildAdminAccessResponse(
   }, req);
 }
 
+async function buildAccountLoginResponse(
+  req: Request,
+  requestBody: Blob | null,
+) {
+  let parsedBody: unknown;
+  try {
+    parsedBody = await parseJsonBodyFromBlob(requestBody);
+  } catch {
+    return jsonResponse(400, {
+      error: "Request body must be valid JSON",
+    }, req);
+  }
+
+  if (!isAdminLoginRequestBody(parsedBody)) {
+    return jsonResponse(400, {
+      error: "Request body must include string email and password fields",
+    }, req);
+  }
+
+  const email = parsedBody.email.trim();
+  const password = parsedBody.password;
+  if (!email || !password) {
+    return jsonResponse(400, {
+      error: "Email and password are required",
+    }, req);
+  }
+
+  const turnstileError = await verifyTurnstileChallenge(req, getTurnstileToken(parsedBody));
+  if (turnstileError) {
+    return turnstileError;
+  }
+
+  const { response, body } = await fetchAccountApiResponse("/accounts/login", {
+    email,
+    password,
+  });
+  if (!response.ok) {
+    return jsonResponse(response.status, body ?? { error: "Failed to authenticate account" }, req);
+  }
+
+  const payloadWithToken = await appendTokenForAccountRoutes(req, body);
+  return jsonResponse(response.status, payloadWithToken, req);
+}
+
 async function buildAdminLoginResponse(
   req: Request,
   requestBody: Blob | null,
@@ -688,6 +837,11 @@ async function buildAdminLoginResponse(
     return jsonResponse(400, {
       error: "Email and password are required",
     }, req);
+  }
+
+  const turnstileError = await verifyTurnstileChallenge(req, getTurnstileToken(parsedBody));
+  if (turnstileError) {
+    return turnstileError;
   }
 
   const { response, body } = await fetchAccountApiResponse("/accounts/login", {
@@ -1148,6 +1302,10 @@ export default {
 
       if (service === SERVICES.ADMIN && isAdminAccessPath(proxyPath)) {
         return await buildAdminAccessResponse(req, requestBody);
+      }
+
+      if (service === SERVICES.ACCOUNTS && isAccountLoginPath(proxyPath)) {
+        return await buildAccountLoginResponse(req, requestBody);
       }
 
       if (service === SERVICES.ADMIN && isAdminLoginPath(proxyPath)) {

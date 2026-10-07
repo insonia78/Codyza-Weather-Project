@@ -1,15 +1,15 @@
 :root {
   color-scheme: dark;
-  --surface: rgba(9, 16, 35, 0.76);
-  --surface-strong: rgba(7, 13, 29, 0.94);
-  --surface-soft: rgba(255, 255, 255, 0.08);
-  --border: rgba(255, 255, 255, 0.12);
+  --surface: rgba(8, 16, 36, 0.8);
+  --surface-strong: rgba(6, 12, 28, 0.96);
+  --surface-soft: rgba(255, 255, 255, 0.09);
+  --border: rgba(255, 255, 255, 0.14);
   --text-primary: #eff6ff;
   --text-secondary: #b8c4dc;
   --accent: #4fd1ff;
   --warning: #fbbf24;
   --danger: #fb7185;
-  --shadow: 0 22px 48px rgba(2, 6, 23, 0.35);
+  --shadow: 0 28px 72px rgba(2, 6, 23, 0.4);
 }
 
 * {
@@ -92,14 +92,14 @@ button {
 .hero__toolbar,
 .panel {
   border: 1px solid var(--border);
-  border-radius: 24px;
+  border-radius: 28px;
   background: var(--surface);
   box-shadow: var(--shadow);
 }
 
 .hero__copy {
   flex: 2 1 520px;
-  padding: 28px;
+  padding: 32px;
 }
 
 .hero__copy h1,
@@ -117,7 +117,7 @@ button {
 
 .hero__toolbar {
   flex: 1 1 340px;
-  padding: 24px;
+  padding: 28px;
   display: flex;
   flex-wrap: wrap;
   align-content: flex-start;
@@ -150,10 +150,16 @@ button {
 .segmented-button,
 .toggle-button,
 .result-card,
-.tag {
+.tag,
+.saved-card,
+.comparison-card,
+.hour-card,
+.day-card,
+.chart-card,
+.detail-chip {
   border: 1px solid transparent;
-  border-radius: 14px;
-  transition: transform 160ms ease, background 160ms ease, border-color 160ms ease;
+  border-radius: 16px;
+  transition: transform 160ms ease, background 160ms ease, border-color 160ms ease, box-shadow 160ms ease;
 }
 
 .primary-button,
@@ -167,6 +173,7 @@ button {
 
 .primary-button {
   background: linear-gradient(135deg, #38bdf8, #2563eb);
+  box-shadow: 0 16px 36px rgba(37, 99, 235, 0.24);
 }
 
 .secondary-button,
@@ -183,6 +190,22 @@ button {
 .toggle-button.is-active {
   background: rgba(79, 209, 255, 0.18);
   border-color: rgba(79, 209, 255, 0.55);
+}
+
+.primary-button:hover,
+.secondary-button:hover,
+.tertiary-button:hover,
+.segmented-button:hover,
+.toggle-button:hover,
+.result-card:hover,
+.saved-card:hover,
+.comparison-card:hover,
+.hour-card:hover,
+.day-card:hover,
+.chart-card:hover,
+.detail-chip:hover {
+  transform: translateY(-1px);
+  box-shadow: 0 14px 30px rgba(2, 6, 23, 0.2);
 }
 
 .status-stack {
@@ -214,7 +237,7 @@ button {
 
 .search-shell,
 .panel {
-  padding: 24px;
+  padding: 28px;
 }
 
 .panel__header {
@@ -417,10 +440,10 @@ button {
 .weather-icon {
   display: grid;
   place-items: center;
-  width: 72px;
-  height: 72px;
-  border-radius: 22px;
-  background: rgba(255, 255, 255, 0.1);
+  width: 80px;
+  height: 80px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, rgba(79, 209, 255, 0.18), rgba(37, 99, 235, 0.16));
   font-size: 2rem;
 }
 
@@ -528,7 +551,7 @@ button {
 .day-card,
 .saved-card,
 .comparison-card {
-  padding: 16px;
+  padding: 18px;
 }
 
 .account-dashboard-grid {

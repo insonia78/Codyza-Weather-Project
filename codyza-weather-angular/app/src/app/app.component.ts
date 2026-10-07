@@ -71,7 +71,7 @@ function loadGoogleMapsScript(apiKey: string): Promise<void> {
     const existingScript = document.getElementById('google-maps-sdk');
     if (existingScript) {
       existingScript.addEventListener('load', () => resolve(), { once: true });
-      existingScript.addEventListener('error', () => reject(new Error('Failed to load Google Maps JavaScript API.')), { once: true });
+      existingScript.addEventListener('error', () => reject(new Error('Failed to load the interactive map.')), { once: true });
       return;
     }
 
@@ -81,7 +81,7 @@ function loadGoogleMapsScript(apiKey: string): Promise<void> {
     script.defer = true;
     script.src = `https://maps.googleapis.com/maps/api/js?key=${encodeURIComponent(apiKey)}&v=weekly`;
     script.addEventListener('load', () => resolve(), { once: true });
-    script.addEventListener('error', () => reject(new Error('Failed to load Google Maps JavaScript API.')), { once: true });
+    script.addEventListener('error', () => reject(new Error('Failed to load the interactive map.')), { once: true });
     document.head.appendChild(script);
   });
 
@@ -279,14 +279,14 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
 
   get profileSyncMessage(): string {
     if (!this.loggedInEmail) {
-      return 'Sign in through the Codyza account flow to sync preferences, favorites, and comparisons.';
+      return 'Sign in to keep your favorites, comparisons, and weather preferences with your account.';
     }
 
     if (this.profileSyncStateMessage) {
       return this.profileSyncStateMessage;
     }
 
-    return 'Profile settings sync automatically through the gateway.';
+    return 'Your dashboard preferences sync automatically to your account.';
   }
 
   get protectedDashboardLastUpdated(): string {
@@ -672,7 +672,7 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
         this.weatherStore.setRecentSearches([]);
         this.profileSyncInProgress = false;
         this.profileUpdatedAt = new Date().toISOString();
-        this.profileSyncStateMessage = 'Recent searches were cleared from your protected dashboard.';
+        this.profileSyncStateMessage = 'Recent searches were cleared from your account dashboard.';
       },
       error: (error: Error) => {
         this.profileSyncInProgress = false;
@@ -993,12 +993,12 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
       ).subscribe({
         next: (profile) => {
           this.profileSyncInProgress = false;
-          this.profileSyncStateMessage = 'Protected dashboard synced through the gateway.';
+          this.profileSyncStateMessage = 'Your account dashboard is fully synced.';
           this.applyProtectedDashboardProfile(profile);
         },
         error: (error: Error) => {
           this.profileSyncInProgress = false;
-          this.profileSyncStateMessage = `Protected dashboard sync failed: ${error.message}`;
+          this.profileSyncStateMessage = `Account dashboard sync failed: ${error.message}`;
           this.weatherStore.appendWarningMessage(this.profileSyncStateMessage);
         }
       })
@@ -1011,16 +1011,16 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     this.profileSyncInProgress = true;
-    this.profileSyncStateMessage = 'Loading protected dashboard...';
+    this.profileSyncStateMessage = 'Loading your account dashboard...';
     this.weatherService.getUserProfile().subscribe({
       next: (profile) => {
         this.profileSyncInProgress = false;
-        this.profileSyncStateMessage = 'Protected dashboard connected.';
+        this.profileSyncStateMessage = 'Your account dashboard is connected.';
         this.applyProtectedDashboardProfile(profile);
       },
       error: (error: Error) => {
         this.profileSyncInProgress = false;
-        this.profileSyncStateMessage = `Protected dashboard could not be loaded: ${error.message}`;
+        this.profileSyncStateMessage = `Your account dashboard could not be loaded: ${error.message}`;
         this.weatherStore.appendWarningMessage(this.profileSyncStateMessage);
         this.loadBackendSearchHistory();
       }
@@ -1034,7 +1034,7 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
       },
       error: (error: Error) => {
         this.weatherStore.appendWarningMessage(
-          `Saved recent searches could not be loaded from the backend: ${error.message}`
+          `Saved recent searches could not be loaded right now: ${error.message}`
         );
       }
     });
@@ -1072,7 +1072,7 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     }
 
     this.profileSyncInProgress = true;
-    this.profileSyncStateMessage = 'Syncing protected dashboard...';
+    this.profileSyncStateMessage = 'Syncing your account dashboard...';
     this.profileSaveRequests$.next();
   }
 
@@ -1084,7 +1084,11 @@ export class AppComponent implements OnInit, AfterViewInit, OnDestroy {
     try {
       await loadGoogleMapsScript(environment.googleWeather.browserApiKey);
     } catch (error) {
-      this.weatherStore.setErrorMessage(error instanceof Error ? error.message : 'Failed to load Google Maps.');
+      this.weatherStore.setErrorMessage(error instanceof Error ? error.message : 'Failed to load the interactive map.');
+      return;
+    }
+
+    if (!this.mapElement) {
       return;
     }
 

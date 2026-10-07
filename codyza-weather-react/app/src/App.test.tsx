@@ -13,9 +13,11 @@ jest.mock('react-router-dom', () => ({
 
 import App from './App';
 
-test('renders environment configuration details', () => {
+test('renders the commercial landing content', () => {
   render(<App />);
-  expect(screen.getByText(/weather updates without the clutter/i)).toBeInTheDocument();
-  expect(screen.getByText(/environment/i)).toBeInTheDocument();
-  expect(screen.getByText(/api base url/i)).toBeInTheDocument();
+  expect(
+    screen.getByText(/plan every day with a weather experience that feels premium/i),
+  ).toBeInTheDocument();
+  expect(screen.getByText(/premium weather access for modern teams and travelers/i)).toBeInTheDocument();
+  expect(screen.getByText(/fast access to every forecast/i)).toBeInTheDocument();
 });

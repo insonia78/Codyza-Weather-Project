@@ -8,6 +8,30 @@ import ErrorPage from './pages/error';
 import { appConfig } from './config/environment';
 import { CodyzaBranding } from './components/CodyzaBranding';
 
+const commercialHighlights = [
+  {
+    title: 'Fast access to every forecast',
+    description:
+      'Move from sign-in to live weather dashboards, saved places, and alerts in just a few clicks.',
+  },
+  {
+    title: 'Designed for everyday confidence',
+    description:
+      'Clean account management, smooth recovery flows, and dependable access across devices.',
+  },
+  {
+    title: 'Built to feel premium',
+    description:
+      'A polished Codyza experience that keeps the focus on people, places, and decisions.',
+  },
+];
+
+const trustPoints = [
+  'Personalized saved locations',
+  'Quick password recovery',
+  'Seamless Codyza account experience',
+];
+
 function Home() {
   return (
     <main className="appShell">
@@ -17,37 +41,40 @@ function Home() {
             <p className="eyebrow">{appConfig.appName}</p>
             <p className="poweredBy">Powered by Codyza</p>
           </div>
-          <span className="environmentBadge">{appConfig.environment}</span>
+          <p className="heroTagline">Premium weather access for modern teams and travelers.</p>
         </div>
-        <h1>Weather updates without the clutter.</h1>
+        <h1>Plan every day with a weather experience that feels premium.</h1>
         <p className="heroCopy">
-          Check conditions, manage your account, and recover access from a
-          cleaner entry point.
+          Codyza Weather brings account access, saved places, and weather-ready planning
+          into one refined entry point built for confidence and speed.
         </p>
+        <ul className="trustList" aria-label="Customer benefits">
+          {trustPoints.map((point) => (
+            <li key={point}>{point}</li>
+          ))}
+        </ul>
         <div className="heroBranding">
           <CodyzaBranding />
         </div>
-        <dl className="environmentDetails" aria-label="Environment configuration">
-          <div>
-            <dt>Environment</dt>
-            <dd>{appConfig.environment}</dd>
-          </div>
-          <div>
-            <dt>API base URL</dt>
-            <dd>{appConfig.apiBaseUrl}</dd>
-          </div>
-        </dl>
         <div className="heroActions">
           <Link className="primaryLink" to="/login">
-            Login
+            Sign in
           </Link>
           <Link className="secondaryLink" to="/registration">
             Create account
           </Link>
           <Link className="ghostLink" to="/reset-password">
-            Reset password
+            Recover access
           </Link>
         </div>
+        <section className="featureGrid" aria-label="Commercial highlights">
+          {commercialHighlights.map((highlight) => (
+            <article key={highlight.title} className="featureCard">
+              <h2>{highlight.title}</h2>
+              <p>{highlight.description}</p>
+            </article>
+          ))}
+        </section>
         <footer className="heroFooter">
           <span>Powered by Codyza</span>
           <a href="https://www.codyza.com" target="_blank" rel="noreferrer">

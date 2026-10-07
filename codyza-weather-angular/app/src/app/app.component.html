@@ -24,19 +24,42 @@
           <strong>Codyza Weather</strong>
         </div>
       </div>
-      <p class="eyebrow">Live global weather intelligence</p>
+      <p class="eyebrow">Premium global weather guidance</p>
       <h1>{{ title }}</h1>
       <p class="hero__summary">
-        Production-style frontend for live worldwide weather, geocoded location search, hourly forecast,
-        daily outlook, recent history, and automatic refresh using {{ providerName }}.
+        A polished live weather experience for planning the day, tracking favorite places,
+        comparing cities, and staying confidently ahead of changing conditions.
       </p>
+      <div class="hero__pill-list" aria-label="Key product benefits">
+        <span class="hero__pill">Live forecasts</span>
+        <span class="hero__pill">Saved places</span>
+        <span class="hero__pill">Air quality and alerts</span>
+        <span class="hero__pill">Premium Codyza experience</span>
+      </div>
+      <div class="hero__proof-grid" aria-label="Codyza Weather value highlights">
+        <article class="hero__proof-card">
+          <span>Always ready</span>
+          <strong>Fast search, fast decisions</strong>
+          <p>Find any city, address, postal code, airport, or coordinates in seconds.</p>
+        </article>
+        <article class="hero__proof-card">
+          <span>Personalized</span>
+          <strong>Your places, your preferences</strong>
+          <p>Keep favorites, comparisons, map settings, and weather preferences in one account.</p>
+        </article>
+        <article class="hero__proof-card">
+          <span>Built for confidence</span>
+          <strong>From everyday plans to major travel</strong>
+          <p>Stay current with temperature, precipitation, wind, air quality, and timely alerts.</p>
+        </article>
+      </div>
       <section class="hero__about panel panel--brand">
         <div>
           <p class="panel__eyebrow">About Codyza</p>
-          <h2>Data-rich software with reliable operations.</h2>
+          <h2>Thoughtful digital products for real-world decisions.</h2>
           <p class="panel__subtext">
-            Codyza designs and delivers polished digital platforms that combine live data, thoughtful UX,
-            and dependable backend services for production use.
+            Codyza designs digital experiences that feel modern, clear, and dependable,
+            helping teams and customers move from information to action with confidence.
           </p>
         </div>
         <a class="primary-button hero__visit" [href]="codyzaUrl" target="_blank" rel="noreferrer">Visit Codyza</a>
@@ -57,7 +80,7 @@
               </svg>
             </span>
             <div class="hero__identity-copy">
-              <span class="hero__identity-label">Notifications</span>
+              <span class="hero__identity-label">Account and alerts</span>
               <strong>{{ loggedInEmail }}</strong>
             </div>
           </button>
@@ -124,10 +147,10 @@
 
   <section class="status-stack">
     @if (!hasApiKey) {
-      <app-status-banner tone="warning" [message]="'Configure the Nest weather API base URL in the environment files to turn on geocoding, current conditions, hourly forecast, daily forecast, and history.'"></app-status-banner>
+      <app-status-banner tone="warning" [message]="'Live weather search and forecasting are temporarily unavailable while service settings are being completed.'"></app-status-banner>
     }
     @if (!hasMapsApiKey) {
-      <app-status-banner tone="info" [message]="'Add a public Google Maps JavaScript API key in the environment files if you want the interactive map enabled in the browser.'"></app-status-banner>
+      <app-status-banner tone="info" [message]="'Interactive maps are temporarily unavailable right now, but weather search and saved places still work.'"></app-status-banner>
     }
     @if (offlineMessage) {
       <app-status-banner tone="warning" [message]="offlineMessage"></app-status-banner>
@@ -149,8 +172,8 @@
   <section class="search-shell panel">
     <div class="panel__header">
       <div>
-        <p class="panel__eyebrow">Search and discovery</p>
-        <h2>City, address, postal code, or coordinates</h2>
+        <p class="panel__eyebrow">Search the world</p>
+        <h2>City, address, postal code, airport, or coordinates</h2>
       </div>
       <button type="button" class="secondary-button" (click)="useCurrentLocation()">Use current location</button>
     </div>
@@ -230,7 +253,7 @@
             <p class="panel__eyebrow">Live conditions</p>
             <h2>{{ dashboard.location.label }}</h2>
             <p class="panel__subtext">
-              Local time {{ currentLocalTime() }} · Last provider sync {{ formatDateTime(dashboard.fetchedAt / 1000, dashboard.timezone, { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' }) }}
+              Local time {{ currentLocalTime() }} · Updated {{ formatDateTime(dashboard.fetchedAt / 1000, dashboard.timezone, { hour: '2-digit', minute: '2-digit', month: 'short', day: 'numeric' }) }}
             </p>
           </div>
           <div class="action-row">
@@ -304,7 +327,7 @@
               <p class="panel__eyebrow">Severe weather alerts</p>
               <h2>Active alert feed</h2>
             </div>
-            <p class="panel__subtext">Live alerts are supplemented by OpenWeather when coverage is available.</p>
+            <p class="panel__subtext">Timely alerting helps surface meaningful weather changes when regional coverage is available.</p>
           </div>
           @if (dashboard.alerts.length) {
             <div class="alert-list">
@@ -340,7 +363,7 @@
               <p class="panel__eyebrow">Air quality</p>
               <h2>Local air conditions</h2>
             </div>
-            <p class="panel__subtext">AQI and pollutant components are refreshed with the weather dashboard.</p>
+            <p class="panel__subtext">Air quality insights refresh alongside current conditions for a more complete daily view.</p>
           </div>
           @if (dashboard.airQuality; as airQuality) {
             <div class="aqi-summary">
@@ -359,7 +382,7 @@
               </div>
             </div>
           } @else {
-            <p class="empty-copy">Air-quality details are unavailable for this location or current provider configuration.</p>
+            <p class="empty-copy">Air-quality details are not available for this location right now.</p>
           }
         </section>
       </section>
@@ -378,7 +401,7 @@
             }
           </select>
         } @else {
-          <p class="panel__subtext">Your Google Maps demo key powers the base map, location clicks, and geocoded weather lookups for this view.</p>
+          <p class="panel__subtext">Explore the map to discover locations and load live weather with a more visual planning experience.</p>
         }
       </div>
       @if (hasMapsApiKey) {
@@ -386,12 +409,12 @@
         <p class="panel__subtext">
           Click anywhere on the map to reverse-search coordinates and load live weather for that point.
           @if (supportsWeatherLayers) {
-            Weather overlays stream from the Nest API so provider keys stay private.
+            Turn on weather overlays for a richer global view of clouds, wind, temperature, and precipitation.
           }
         </p>
       } @else {
         <div class="map-canvas"></div>
-        <p class="panel__subtext">Add a public Google Maps JavaScript API key to re-enable the interactive map in the browser.</p>
+        <p class="panel__subtext">The interactive map is temporarily unavailable right now.</p>
       }
     </section>
 
@@ -402,7 +425,7 @@
             <p class="panel__eyebrow">Recent conditions</p>
             <h2>Last 24-hour summary</h2>
           </div>
-          <p class="panel__subtext">Derived from the current conditions history returned by {{ providerName }}.</p>
+          <p class="panel__subtext">A quick look at how conditions have shifted over the last day.</p>
         </div>
         @if (dashboard.currentHistory; as currentHistory) {
           <div class="metric-grid">
@@ -440,7 +463,7 @@
             <p class="panel__eyebrow">Daily outlook</p>
             <h2>{{ dashboard.providerForecastDays }}-day forecast</h2>
           </div>
-          <p class="panel__subtext">{{ providerName }} currently exposes {{ dashboard.providerForecastDays }} daily forecast periods in this dashboard.</p>
+          <p class="panel__subtext">Plan ahead with a longer-range outlook designed for quicker decisions and clearer comparisons.</p>
         </div>
         <div class="daily-grid">
           @for (day of dashboard.daily; track trackByDailyPoint($index, day)) {
@@ -657,7 +680,7 @@
             <p class="panel__eyebrow">Historical weather</p>
             <h2>Recent hourly history</h2>
           </div>
-          <p class="panel__subtext">Google Weather API returns recent hourly history when it is available for the selected location.</p>
+          <p class="panel__subtext">Review recent conditions to understand how the day has been changing over time.</p>
         </div>
         @if (dashboard.historical?.points?.length) {
           <div class="hourly-grid">
@@ -671,7 +694,7 @@
             }
           </div>
         } @else {
-          <p class="empty-copy">Recent hourly history is unavailable for this location or current {{ providerName }} demo-key configuration.</p>
+          <p class="empty-copy">Recent hourly history is unavailable for this location right now.</p>
         }
       </section>
     }

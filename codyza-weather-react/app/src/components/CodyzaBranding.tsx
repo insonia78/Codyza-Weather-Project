@@ -61,8 +61,8 @@ export function CodyzaBranding({
 
       {showAbout ? (
         <p className="codyza-brand__about">
-          Codyza builds polished digital products that blend live data, dependable backend services,
-          and thoughtful user experience design for real-world teams.
+          Codyza creates polished digital experiences that combine clear information,
+          confident design, and smooth customer journeys for real-world teams.
         </p>
       ) : null}
 

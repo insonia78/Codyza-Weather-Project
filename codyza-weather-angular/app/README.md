@@ -46,6 +46,8 @@ When a `jwt_token` exists in local storage, Angular automatically sends it as a 
 
 The Angular weather dashboard now performs an auth gate at startup. If no `jwt_token` is present, the app does not render the protected dashboard UI and immediately redirects the browser to `rootAppUrl` so users must sign in through the Codyza account flow first.
 
+The authenticated dashboard is intentionally presented as a customer-facing Codyza experience: premium branding, benefit-led copy, and user-friendly messaging rather than infrastructure-oriented terminology.
+
 Protected account sync uses two backend surfaces behind the same gateway-authenticated `/api/weather` namespace:
 
 - `/api/weather/search-history` for backend recent searches

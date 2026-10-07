@@ -24,6 +24,16 @@ jest.mock('next/navigation', () => ({
   useSearchParams: () => useSearchParamsMock(),
 }));
 
+jest.mock('../components/turnstile-widget', () => ({
+  TurnstileWidget: ({ onTokenChange }: { onTokenChange: (token: string) => void }) => {
+    const React = jest.requireActual('react') as typeof import('react');
+    React.useEffect(() => {
+      onTokenChange('turnstile-token');
+    }, [onTokenChange]);
+    return <div data-testid="turnstile-widget" />;
+  },
+}));
+
 describe('LoginForm', () => {
   beforeEach(() => {
     jest.clearAllMocks();
@@ -77,6 +87,11 @@ describe('LoginForm', () => {
 
     await waitFor(() => expect(fetchMock).toHaveBeenCalledWith('/api/auth/login', expect.objectContaining({
       method: 'POST',
+      body: JSON.stringify({
+        email: 'admin@example.com',
+        password: 'password123',
+        turnstileToken: 'turnstile-token',
+      }),
     })));
     expect(replaceMock).toHaveBeenCalledWith('/dashboard');
     expect(refreshMock).toHaveBeenCalled();

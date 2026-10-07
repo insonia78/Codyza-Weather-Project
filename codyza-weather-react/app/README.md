@@ -48,8 +48,13 @@ The following variables are available:
 - `REACT_APP_API_BASE_URL`: API base URL used by the frontend configuration
 - `REACT_APP_CODYZA_WEATHER_URL`: URL used after successful login or registration to send the user to the weather application
 - `REACT_APP_ADMIN_APP_URL`: base URL of the Next.js administration app used when a login or registration email belongs to an administrator so the React app can redirect that user to the correct admin flow
+- `REACT_APP_TURNSTILE_SITE_KEY`: Cloudflare Turnstile site key rendered on the public sign-in form
 
 The public account pages include Codyza branding with a reusable logo, a short About Codyza section, a Visit Codyza action, and Powered by Codyza messaging on major screens.
+
+The public landing and auth screens intentionally hide environment labels and API endpoint details from end users so the experience stays commercial and customer-facing rather than technical.
+
+The public login flow now requires a Cloudflare Turnstile check before credentials are submitted to the gateway-backed account login endpoint.
 
 The reset-password page now supports the full user flow:
 
