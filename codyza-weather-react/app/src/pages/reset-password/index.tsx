@@ -27,7 +27,7 @@ const ResetPassword = () => {
       <p className={styles.description}>
         {isConfirmingPasswordReset
           ? 'Enter and confirm your new password to finish resetting your Codyza Weather account.'
-          : 'Enter your email and we will guide you back into your account. Administrator emails are redirected to the Codyza Weather administration password setup flow.'}
+          : 'Enter your email and we will help you securely get back into your Codyza Weather account.'}
       </p>
        {errors.length > 0 && (
         <div className={styles.errorBox}>
@@ -44,8 +44,8 @@ const ResetPassword = () => {
       )}
       {actionData?.previewUrl && (
         <div className={styles.successBox}>
-          <p>Password reset email preview:</p>
-          <a href={actionData.previewUrl}>Open password reset link</a>
+          <p>Your password reset link is ready.</p>
+          <a href={actionData.previewUrl}>Continue to password reset</a>
         </div>
       )}
       {!isCompleted && <Form className={styles.form} method="post" noValidate>

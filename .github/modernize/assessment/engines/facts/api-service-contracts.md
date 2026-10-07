@@ -21,7 +21,7 @@ Codyza Weather exposes a multi-layer API surface: a public Supabase Edge gateway
 | weather-gateway | GET | `/health` | none | health JSON / simple status response |
 | weather-gateway | POST | `/accounts` | `AccountBase`-style JSON body | account creation result |
 | weather-gateway | POST | `/accounts/access` | email lookup JSON body | account access state |
-| weather-gateway | POST | `/accounts/login` | email/password JSON body | custom JWT + token record |
+| weather-gateway | POST | `/accounts/login` | email/password JSON body + Turnstile token | custom JWT + token record |
 | weather-gateway | POST | `/accounts/password/setup` | `AccountPasswordSetup`-style JSON body | custom JWT + token record |
 | weather-gateway | POST | `/accounts/reset-password` | password reset request JSON body | password reset acceptance / preview URL |
 | weather-gateway | POST | `/accounts/reset-password/confirm` | password reset confirm JSON body | password reset completion |
@@ -36,7 +36,7 @@ Codyza Weather exposes a multi-layer API surface: a public Supabase Edge gateway
 | weather-gateway | GET/POST/DELETE | `/weather/search-history` | header-authenticated request, optional `SaveSearchHistoryRequestBody` | recent searches list / saved item / clear result |
 | weather-gateway | GET/PUT | `/weather/profile` | header-authenticated request, `SaveWeatherUserProfileRequestBody` for PUT | `WeatherUserProfile` |
 | weather-gateway | POST | `/admin/access` | admin email lookup JSON body | admin access state |
-| weather-gateway | POST | `/admin/login` | admin email/password JSON body | custom JWT + token record |
+| weather-gateway | POST | `/admin/login` | admin email/password JSON body + Turnstile token | custom JWT + token record |
 | weather-gateway | POST | `/admin/create-password` | admin email/password JSON body | custom JWT + token record |
 | weather-gateway | POST | `/admin/dashboard` | bearer token | `AdminDashboardSnapshot` |
 | weather-gateway | GET | `/admin/dashboard/stream` | bearer token | SSE `AdminDashboardStreamPayload` |
@@ -62,7 +62,7 @@ Codyza Weather exposes a multi-layer API surface: a public Supabase Edge gateway
 | FastAPI registration API | PATCH | `/accounts/{id}` | path id + `AccountUpdate` | `AccountPublic` |
 | FastAPI registration API | DELETE | `/accounts/{id}` | path id | `AccountPublic` |
 | Next.js admin internal API | POST | `/api/auth/access` | `{ email }` JSON body | admin access JSON |
-| Next.js admin internal API | POST | `/api/auth/login` | `{ email, password }` JSON body | `{ ok: true }` + session cookie |
+| Next.js admin internal API | POST | `/api/auth/login` | `{ email, password, turnstileToken }` JSON body | `{ ok: true }` + session cookie |
 | Next.js admin internal API | POST | `/api/auth/create-password` | `{ email, password }` JSON body | `{ ok: true }` + session cookie |
 | Next.js admin internal API | POST | `/api/auth/logout` | session cookie / bearer forwarding | `{ ok: true }` |
 | Next.js admin internal API | GET/POST | `/api/admin/dashboard` | admin session cookie | admin dashboard JSON |

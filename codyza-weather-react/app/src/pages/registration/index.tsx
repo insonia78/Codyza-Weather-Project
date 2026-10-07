@@ -16,8 +16,8 @@ const Registration = () => {
       <section className={styles.card}>
       <CodyzaBranding compact showPoweredBy={false} />
       <p className={styles.eyebrow}>Join Codyza Weather</p>
-      <h1 className={styles.title}>Registration</h1>
-      <p className={styles.description}>Create your account to save locations and alerts. Administrator emails are redirected to the Codyza Weather administration password setup flow.</p>
+      <h1 className={styles.title}>Create your account</h1>
+      <p className={styles.description}>Start saving favorite places, managing alerts, and personalizing your weather experience.</p>
       {errors.length > 0 && (
         <div className={styles.errorBox}>
           <h2>Validation Errors:</h2>
@@ -45,7 +45,7 @@ const Registration = () => {
           <input type="password" id="confirmPassword" name="confirmPassword" required />
         </label>
         <button className={styles.submitButton} type="submit" disabled={isSubmitting}>
-          {isSubmitting ? 'Submitting...' : 'Register'}
+          {isSubmitting ? 'Submitting...' : 'Create account'}
         </button>
       </Form>
       <div className={styles.footerLinks}>

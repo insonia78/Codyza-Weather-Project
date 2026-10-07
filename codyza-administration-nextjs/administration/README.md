@@ -48,6 +48,8 @@ The admin login flow is email-first:
 4. if a password exists, the app prompts for it on `/login`
 5. successful login or first-time password creation returns a JWT from the shared token service, stores it in an HttpOnly session cookie, and uses that token for protected admin requests through the gateway
 
+The password step now requires a Cloudflare Turnstile challenge before the admin login route will forward credentials to the shared gateway.
+
 Both the App Router page (`/`) and the App Routes (`/api/admin/dashboard`, `/api/admin/dashboard/stream`) are protected by [proxy.ts](./proxy.ts), which requires a valid admin JWT session cookie and redirects unauthenticated browser requests to `/login`.
 
 The App Routes fetch dashboard data through the Supabase `weather-gateway` function with:
@@ -72,6 +74,7 @@ Create a `.env.local` file when running this app outside local defaults:
 ADMIN_GATEWAY_BASE_URL=http://localhost:54321/functions/v1/weather-gateway
 ADMIN_GATEWAY_API_KEY=
 NEXT_PUBLIC_ROOT_APP_URL=https://codyza-weather-project-17oc.vercel.app
+NEXT_PUBLIC_TURNSTILE_SITE_KEY=your-cloudflare-turnstile-site-key
 ```
 
 You can start from [`.env.local.example`](./.env.local.example) and copy it to `.env.local`.
@@ -99,4 +102,5 @@ Deploy this app alongside the Nest API and configure:
 
 - `ADMIN_GATEWAY_BASE_URL` to the live `weather-gateway` function URL
 - `ADMIN_GATEWAY_API_KEY` to a key that can call the live `weather-gateway` function
+- `NEXT_PUBLIC_TURNSTILE_SITE_KEY` to the public Cloudflare Turnstile site key used on the admin login form
 - an administrator account record in the registration database with `role=admin`

@@ -97,7 +97,7 @@ describe('AppComponent', () => {
 
     const compiled = fixture.nativeElement as HTMLElement;
     expect(compiled.textContent).toContain('weather.user@example.com');
-    expect(compiled.textContent).toContain('Notifications');
+    expect(compiled.textContent).toContain('Account and alerts');
     expect(compiled.querySelector('.hero__identity svg')).toBeTruthy();
   });
 

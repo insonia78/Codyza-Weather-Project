@@ -29,6 +29,7 @@ Implemented in the current codebase:
 - Celsius or Fahrenheit plus metric or imperial preferences
 - recent searches, favorites, saved multi-city comparisons, and notification preferences
 - protected signup, login, logout, password reset, and account deactivation flows
+- Cloudflare Turnstile-protected user and admin sign-in flows
 - admin observability dashboard with usage, failed requests, search demand, cache metrics, active users, and system health
 - trusted gateway-only access into protected backend services
 

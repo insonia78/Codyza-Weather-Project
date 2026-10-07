@@ -26,6 +26,61 @@
   font-size: 1.15rem;
 }
 
+.hero__pill-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 12px;
+  margin-top: 24px;
+}
+
+.hero__pill {
+  display: inline-flex;
+  align-items: center;
+  padding: 10px 14px;
+  border-radius: 999px;
+  background: rgba(79, 209, 255, 0.1);
+  border: 1px solid rgba(79, 209, 255, 0.18);
+  color: var(--text-primary);
+  font-size: 0.92rem;
+  font-weight: 600;
+}
+
+.hero__proof-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 14px;
+  margin-top: 24px;
+}
+
+.hero__proof-card {
+  padding: 18px;
+  border-radius: 20px;
+  background: rgba(2, 6, 23, 0.34);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.hero__proof-card span {
+  display: inline-block;
+  margin-bottom: 10px;
+  color: #7dd3fc;
+  font-size: 0.76rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.hero__proof-card strong {
+  display: block;
+  color: var(--text-primary);
+  font-size: 1rem;
+}
+
+.hero__proof-card p {
+  margin: 10px 0 0;
+  color: var(--text-secondary);
+  line-height: 1.6;
+}
+
 .panel--brand {
   margin-top: 24px;
   display: flex;
@@ -140,6 +195,12 @@
 .app-footer a {
   color: #7dd3fc;
   text-decoration: none;
+}
+
+@media (max-width: 980px) {
+  .hero__proof-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .insight-grid {
