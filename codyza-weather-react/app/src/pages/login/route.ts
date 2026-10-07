@@ -18,7 +18,6 @@ export async function loginAction({
   const formData = await request.formData();
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
-  const turnstileToken = String(formData.get("turnstileToken") ?? "").trim();
   if (!email.trim()) {
     return {
       errors: ["Email is required."],
@@ -40,18 +39,11 @@ export async function loginAction({
       };
     }
 
-    if (!turnstileToken) {
-      return {
-        errors: ["Complete the security check before signing in."],
-        values: { email },
-      };
-    }
-
     const response = await fetch(
       `${process.env.REACT_APP_API_BASE_URL}/accounts/login`,
       {
         method: "POST",
-        body: JSON.stringify({ email, password, turnstileToken }),
+        body: JSON.stringify({ email, password }),
         headers: {
           "Content-Type": "application/json",
           "apiKey": process.env.REACT_APP_API_KEY ?? "",

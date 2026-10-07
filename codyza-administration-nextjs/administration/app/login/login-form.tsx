@@ -1,8 +1,7 @@
 "use client";
 
 import { useRouter, useSearchParams } from "next/navigation";
-import { useCallback, useMemo, useState } from "react";
-import { TurnstileWidget } from "../components/turnstile-widget";
+import { useMemo, useState } from "react";
 
 type AccessResponse = {
   email: string;
@@ -18,10 +17,6 @@ export function LoginForm() {
   const [error, setError] = useState<string | null>(null);
   const [isPending, setIsPending] = useState(false);
   const [step, setStep] = useState<"email" | "password">(initialEmail ? "password" : "email");
-  const [turnstileToken, setTurnstileToken] = useState("");
-  const handleTurnstileTokenChange = useCallback((token: string) => {
-    setTurnstileToken(token);
-  }, []);
 
   async function handleEmailSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -60,11 +55,6 @@ export function LoginForm() {
     event.preventDefault();
     setError(null);
 
-    if (!turnstileToken) {
-      setError("Complete the security check before signing in.");
-      return;
-    }
-
     setIsPending(true);
 
     try {
@@ -73,7 +63,7 @@ export function LoginForm() {
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify({ email, password, turnstileToken }),
+        body: JSON.stringify({ email, password }),
       });
 
       const body = await response.json().catch(() => null) as { error?: string } | null;
@@ -120,10 +110,6 @@ export function LoginForm() {
             minLength={8}
           />
         </div>
-        <TurnstileWidget
-          siteKey={process.env.NEXT_PUBLIC_TURNSTILE_SITE_KEY ?? ""}
-          onTokenChange={handleTurnstileTokenChange}
-        />
         {error ? <div className="auth-error">{error}</div> : null}
         <div className="auth-actions">
           <button
