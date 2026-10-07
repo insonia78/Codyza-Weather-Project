@@ -244,58 +244,75 @@ export class WeatherProviderService {
       throw new BadRequestException('A search query is required.');
     }
 
-    const coordinateMatch = normalizedQuery.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
-    if (coordinateMatch) {
-      return this.reverseGeocode(Number(coordinateMatch[1]), Number(coordinateMatch[2]), 'search');
+    try {
+      const coordinateMatch = normalizedQuery.match(/^\s*(-?\d+(?:\.\d+)?)\s*,\s*(-?\d+(?:\.\d+)?)\s*$/);
+      if (coordinateMatch) {
+        return this.reverseGeocode(Number(coordinateMatch[1]), Number(coordinateMatch[2]), 'search');
+      }
+
+      const primary = await this.request<GoogleGeocodeResponse>(
+        this.buildGeocodeUrl(normalizedQuery),
+        `search:${normalizedQuery.toLowerCase()}`,
+        15 * 60 * 1000,
+      );
+
+      const primaryResults = this.rankSearchResults(
+        normalizedQuery,
+        this.uniqueLocations(
+          this.getGeocodeResults(primary).map((result) => this.mapGeocodeResult(result, 'search', normalizedQuery))
+        )
+      ).slice(0, 6);
+
+      if (!this.isAirportCodeQuery(normalizedQuery)) {
+        return primaryResults;
+      }
+
+      const normalizedAirportCode = normalizedQuery.toUpperCase();
+      const hasExactAirportMatch = primaryResults.some((result) =>
+        result.category === 'airport' &&
+        result.airportCode?.toUpperCase() === normalizedAirportCode
+      );
+      if (hasExactAirportMatch) {
+        return primaryResults;
+      }
+
+      const airport = await this.request<GoogleGeocodeResponse>(
+        this.buildGeocodeUrl(`${normalizedQuery} airport`),
+        `search-airport:${normalizedQuery.toLowerCase()}`,
+        15 * 60 * 1000,
+      );
+
+      return this.rankSearchResults(
+        normalizedQuery,
+        this.uniqueLocations([
+          ...primaryResults,
+          ...this.getGeocodeResults(airport).map((result) => this.mapGeocodeResult(result, 'search', normalizedQuery))
+        ]),
+      ).slice(0, 8);
+    } catch (error) {
+      this.rethrowProviderSurfaceError('Location search', error);
     }
-
-    const primary = await this.request<GoogleGeocodeResponse>(
-      this.buildGeocodeUrl(normalizedQuery),
-      `search:${normalizedQuery.toLowerCase()}`,
-      15 * 60 * 1000,
-    );
-
-    const primaryResults = this.rankSearchResults(
-      normalizedQuery,
-      this.uniqueLocations(
-        this.getGeocodeResults(primary).map((result) => this.mapGeocodeResult(result, 'search', normalizedQuery))
-      )
-    ).slice(0, 6);
-
-    if (!this.isAirportCodeQuery(normalizedQuery)) {
-      return primaryResults;
-    }
-
-    const airport = await this.request<GoogleGeocodeResponse>(
-      this.buildGeocodeUrl(`${normalizedQuery} airport`),
-      `search-airport:${normalizedQuery.toLowerCase()}`,
-      15 * 60 * 1000,
-    );
-
-    return this.rankSearchResults(
-      normalizedQuery,
-      this.uniqueLocations([
-        ...primaryResults,
-        ...this.getGeocodeResults(airport).map((result) => this.mapGeocodeResult(result, 'search', normalizedQuery))
-      ]),
-    ).slice(0, 8);
   }
 
   async reverseGeocode(lat: number, lon: number, source: WeatherLocation['source']): Promise<WeatherLocation[]> {
     this.ensureApiKeyConfigured();
 
-    const response = await this.request<GoogleGeocodeResponse>(
-      this.buildReverseGeocodeUrl(lat, lon),
-      `reverse:${lat.toFixed(3)}:${lon.toFixed(3)}`,
-      6 * 60 * 60 * 1000,
-    );
+    try {
+      const response = await this.request<GoogleGeocodeResponse>(
+        this.buildReverseGeocodeUrl(lat, lon),
+        `reverse:${lat.toFixed(3)}:${lon.toFixed(3)}`,
+        6 * 60 * 60 * 1000,
+      );
 
-    const results = this.getGeocodeResults(response);
-    if (!results.length) {
-      return [this.createCoordinateLocation(lat, lon, source)];
+      const results = this.getGeocodeResults(response);
+      if (!results.length) {
+        return [this.createCoordinateLocation(lat, lon, source)];
+      }
+
+      return this.uniqueLocations(results.map((result) => this.mapGeocodeResult(result, source)));
+    } catch (error) {
+      this.rethrowProviderSurfaceError('Reverse geocoding', error);
     }
-
-    return this.uniqueLocations(results.map((result) => this.mapGeocodeResult(result, source)));
   }
 
   async getDashboard(request: DashboardRequestBody): Promise<WeatherDashboard> {
@@ -1128,6 +1145,18 @@ export class WeatherProviderService {
     }
 
     return `${surfaceName} could not be loaded.`;
+  }
+
+  private rethrowProviderSurfaceError(surfaceName: string, error: unknown): never {
+    if (
+      error instanceof BadRequestException ||
+      error instanceof ServiceUnavailableException ||
+      error instanceof InternalServerErrorException
+    ) {
+      throw error;
+    }
+
+    throw new ServiceUnavailableException(this.formatApiError(surfaceName, error));
   }
 
   private getProviderMessage(responseJson: ProviderErrorPayload | unknown): string | undefined {
