@@ -1,3 +1,5 @@
+import { ServiceUnavailableException } from '@nestjs/common';
+
 import { WeatherProviderService } from './weather.service.js';
 import { CacheMetricsService } from '../admin/cache-metrics.service.js';
 
@@ -138,6 +140,55 @@ describe('WeatherProviderService', () => {
     expect(global.fetch).toHaveBeenCalledTimes(1);
   });
 
+  it('avoids a second airport lookup when the primary results already contain the exact airport code', async () => {
+    global.fetch = vi.fn().mockResolvedValue(
+      createFetchResponse(
+        JSON.stringify({
+          results: [
+            {
+              placeId: 'jfk',
+              location: {
+                latitude: 40.6413,
+                longitude: -73.7781,
+              },
+              formattedAddress: 'John F. Kennedy International Airport, Queens, NY, USA',
+              addressComponents: [
+                {
+                  longText: 'John F. Kennedy International Airport',
+                  shortText: 'JFK',
+                  types: ['airport'],
+                },
+                {
+                  longText: 'United States',
+                  types: ['country'],
+                },
+              ],
+              types: ['airport'],
+            },
+          ],
+        }),
+      ),
+    );
+
+    const service = new WeatherProviderService(new CacheMetricsService());
+
+    await expect(service.searchLocations('JFK')).resolves.toEqual([
+      {
+        id: '40.641:-73.778',
+        name: 'John F. Kennedy International Airport (JFK)',
+        state: undefined,
+        country: 'United States',
+        lat: 40.6413,
+        lon: -73.7781,
+        label: 'John F. Kennedy International Airport, Queens, NY, USA (JFK)',
+        source: 'search',
+        category: 'airport',
+        airportCode: 'JFK',
+      },
+    ]);
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
   it('prioritizes airport matches and annotates airport codes for airport-style queries', async () => {
     global.fetch = vi
       .fn()
@@ -225,5 +276,26 @@ describe('WeatherProviderService', () => {
         category: 'city',
       },
     ]);
+  });
+
+  it('surfaces provider rate limits as a service-unavailable location search error', async () => {
+    global.fetch = vi.fn().mockResolvedValue({
+      ok: false,
+      status: 429,
+      statusText: 'Too Many Requests',
+      text: vi.fn().mockResolvedValue(JSON.stringify({
+        error: {
+          message: 'Quota exceeded for geocoding requests.',
+        },
+      })),
+    } as unknown as Response);
+
+    const service = new WeatherProviderService(new CacheMetricsService());
+
+    await expect(service.searchLocations('JFK')).rejects.toEqual(
+      new ServiceUnavailableException(
+        'Location search is temporarily rate limited by Google Maps Weather API. Please retry in a moment.',
+      ),
+    );
   });
 });
