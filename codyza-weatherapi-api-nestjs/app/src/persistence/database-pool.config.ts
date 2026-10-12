@@ -2,7 +2,7 @@ import type { PoolConfig } from 'pg';
 
 const defaultWeatherPoolMax = 6;
 const defaultObservabilityPoolMax = 3;
-const defaultCombinedPoolMax = 15;
+const defaultCombinedPoolMax = 10;
 const defaultPoolIdleTimeoutMs = 30_000;
 const defaultPoolConnectionTimeoutMs = 5_000;
 const defaultPoolMaxLifetimeSeconds = 1_800;
