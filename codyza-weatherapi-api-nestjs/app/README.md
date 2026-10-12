@@ -133,6 +133,8 @@ The search-history/profile database client uses an explicit `pg.Pool` with confi
 - `WEATHER_DATABASE_POOL_CONNECTION_TIMEOUT_MS`
 - `WEATHER_DATABASE_POOL_MAX_LIFETIME_SECONDS`
 
+Each pooled PostgreSQL connection is now retired after a single completed use (`maxUses: 1`), so the app closes the underlying database connection instead of keeping it around for reuse after the query finishes.
+
 Recommended shared 10-connection budget:
 
 - Nest weather/profile/search-history pool: `6`
@@ -200,6 +202,8 @@ The observability database client also uses an explicit `pg.Pool`, with optional
 - `WEATHER_OBSERVABILITY_POOL_MAX_LIFETIME_SECONDS`
 
 If an observability-specific pool variable is not set, the service falls back to the shared `WEATHER_DATABASE_POOL_*` value before using its internal defaults.
+
+Observability queries follow the same behavior: each database connection is closed after its completed use instead of being reused for later requests.
 
 - Nest admin observability pool: `3`
 - the application now rejects startup pool settings above the shared `10` combined-connection budget
