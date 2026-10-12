@@ -45,45 +45,45 @@ describe('buildDatabasePoolConfig', () => {
   });
 
   it('prefers prefix-specific overrides over shared defaults', () => {
-    process.env.WEATHER_DATABASE_POOL_MAX = '12';
+    process.env.WEATHER_DATABASE_POOL_MAX = '7';
     process.env.WEATHER_OBSERVABILITY_POOL_MAX = '3';
 
     expect(buildDatabasePoolConfig('******example.com:5432/weather', true, 'WEATHER_OBSERVABILITY_POOL')).toMatchObject({
       max: 3,
     });
     expect(buildDatabasePoolConfig('******example.com:5432/weather', false, 'WEATHER_DATABASE_POOL')).toMatchObject({
-      max: 12,
+      max: 7,
       ssl: undefined,
     });
   });
 
-  it('allows a combined pool max of exactly 15 connections', () => {
-    process.env.WEATHER_DATABASE_POOL_MAX = '12';
-    process.env.WEATHER_OBSERVABILITY_POOL_MAX = '3';
+  it('allows a combined pool max of exactly 10 connections', () => {
+    process.env.WEATHER_DATABASE_POOL_MAX = '6';
+    process.env.WEATHER_OBSERVABILITY_POOL_MAX = '4';
 
     expect(buildDatabasePoolConfig('******example.com:5432/weather', true, 'WEATHER_DATABASE_POOL')).toMatchObject({
-      max: 12,
+      max: 6,
     });
   });
 
-  it('rejects pool max settings that exceed the shared 15-connection budget', () => {
-    process.env.WEATHER_DATABASE_POOL_MAX = '12';
+  it('rejects pool max settings that exceed the shared 10-connection budget', () => {
+    process.env.WEATHER_DATABASE_POOL_MAX = '7';
     process.env.WEATHER_OBSERVABILITY_POOL_MAX = '4';
 
     expect(() => buildDatabasePoolConfig('******example.com:5432/weather', true, 'WEATHER_DATABASE_POOL')).toThrowError(
       new RangeError(
-        'Combined PostgreSQL pool max exceeds the shared 15-connection budget (12 + 4 = 16). Lower WEATHER_DATABASE_POOL_MAX and/or WEATHER_OBSERVABILITY_POOL_MAX.',
+        'Combined PostgreSQL pool max exceeds the shared 10-connection budget (7 + 4 = 11). Lower WEATHER_DATABASE_POOL_MAX and/or WEATHER_OBSERVABILITY_POOL_MAX.',
       ),
     );
   });
 
   it('applies the shared weather pool override to observability when a specific override is missing', () => {
-    process.env.WEATHER_DATABASE_POOL_MAX = '8';
+    process.env.WEATHER_DATABASE_POOL_MAX = '6';
     delete process.env.WEATHER_OBSERVABILITY_POOL_MAX;
 
     expect(() => buildDatabasePoolConfig('******example.com:5432/weather', true, 'WEATHER_OBSERVABILITY_POOL')).toThrowError(
       new RangeError(
-        'Combined PostgreSQL pool max exceeds the shared 15-connection budget (8 + 8 = 16). Lower WEATHER_DATABASE_POOL_MAX and/or WEATHER_OBSERVABILITY_POOL_MAX.',
+        'Combined PostgreSQL pool max exceeds the shared 10-connection budget (6 + 6 = 12). Lower WEATHER_DATABASE_POOL_MAX and/or WEATHER_OBSERVABILITY_POOL_MAX.',
       ),
     );
   });
