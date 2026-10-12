@@ -75,6 +75,7 @@ export function buildDatabasePoolConfig(
       [`${prefix}_MAX_LIFETIME_SECONDS`, 'WEATHER_DATABASE_POOL_MAX_LIFETIME_SECONDS'],
       defaultPoolMaxLifetimeSeconds,
     ),
+    maxUses: 1,
     allowExitOnIdle: false,
     ssl: useSsl ? { rejectUnauthorized: false } : undefined,
   };

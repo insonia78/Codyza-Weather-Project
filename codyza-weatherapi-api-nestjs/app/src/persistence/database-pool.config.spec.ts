@@ -35,6 +35,7 @@ describe('buildDatabasePoolConfig', () => {
       idleTimeoutMillis: 30_000,
       connectionTimeoutMillis: 5_000,
       maxLifetimeSeconds: 1_800,
+      maxUses: 1,
       allowExitOnIdle: false,
       ssl: { rejectUnauthorized: false },
     });
